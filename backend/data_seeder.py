@@ -44,4 +44,5 @@ def seed(batch_size=500):
   for start in range(0,len(df),batch_size):
    db.table(table).upsert(df.iloc[start:start+batch_size].to_dict("records"),on_conflict="customer_id" if table=="customers" else "transaction_id").execute()
  print(f"Seeded {len(customers)} demo customers and {len(transactions)} transactions")
+ return {"customers_seeded":len(customers),"transactions_seeded":len(transactions)}
 if __name__=="__main__":seed()

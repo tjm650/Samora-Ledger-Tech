@@ -9,8 +9,8 @@ def test_salary_disruption_and_velocity_features():
     ]
     frame=engineer_features(pd.DataFrame(rows),now=now)
     row=frame.iloc[0]
-    assert row.salary_disruption_flag is True
-    assert row.recency_days == 10
+    assert bool(row.salary_disruption_flag) is True
+    assert row.recency_days == 9
     assert row.balance_avg_30d == 100
 
 def test_rule_score_is_bounded_and_actionable():

@@ -30,6 +30,11 @@ def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
     if os.getenv("ALLOW_DEMO_SEEDING") != "true":
         raise HTTPException(403,"Demo seeding is disabled; enable ALLOW_DEMO_SEEDING only for a disposable demo database")
     try:
+        from supabase import create_client
+        db=create_client(os.environ["SUPABASE_URL"],os.environ["SUPABASE_SERVICE_ROLE_KEY"])
+        existing=db.table("customers").select("customer_id",count="exact").limit(1).execute()
+        if (existing.count or 0) > 0:
+            raise HTTPException(409,"Demo seeding is one-shot and this database is not empty")
         seed_result=seed_demo_data()
         pipeline_result=run_pipeline()
         return {"status":"completed","seed":seed_result,"pipeline":pipeline_result}

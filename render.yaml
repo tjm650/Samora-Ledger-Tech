@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: samora-ledger-analytics
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: API_KEY
+        generateValue: true
+      - key: API_CORS_ORIGINS
+        sync: false

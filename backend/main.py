@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from analytics import run_pipeline, explain_customer
+from data_seeder import seed as seed_demo_data
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO"))
 log=logging.getLogger("samora")
@@ -23,6 +24,19 @@ def pipeline(x_api_key: str|None=Header(default=None)):
     except Exception as exc:
         log.exception("Analytics pipeline failed")
         raise HTTPException(500,"Pipeline failed; inspect service logs") from exc
+@app.post("/api/v1/admin/seed-and-run-demo")
+def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
+    authorize(x_api_key)
+    if os.getenv("ALLOW_DEMO_SEEDING") != "true":
+        raise HTTPException(403,"Demo seeding is disabled; enable ALLOW_DEMO_SEEDING only for a disposable demo database")
+    try:
+        seed_result=seed_demo_data()
+        pipeline_result=run_pipeline()
+        return {"status":"completed","seed":seed_result,"pipeline":pipeline_result}
+    except Exception as exc:
+        log.exception("Demo seed and analytics run failed")
+        raise HTTPException(500,"Demo seed or analytics run failed; inspect service logs") from exc
+
 @app.get("/api/v1/explain/{customer_id}")
 def explain(customer_id:str,x_api_key:str|None=Header(default=None)):
     authorize(x_api_key)

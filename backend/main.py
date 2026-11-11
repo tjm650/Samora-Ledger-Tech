@@ -1,5 +1,5 @@
 from __future__ import annotations
-import logging, os, secrets
+import hashlib, logging, os, secrets
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +16,10 @@ def authorize(x_api_key: str|None):
     if not expected: raise HTTPException(503,"API_KEY is not configured")
     if not x_api_key or not secrets.compare_digest(x_api_key,expected): raise HTTPException(401,"Invalid API key")
 @app.get("/health")
-def health(): return {"status":"ok","service":"samora-ledger-tech"}
+def health():
+    configured_key=os.getenv("API_KEY","")
+    fingerprint=hashlib.sha256(configured_key.encode("utf-8")).hexdigest()[:12] if configured_key else None
+    return {"status":"ok","service":"samora-ledger-tech","api_key_length":len(configured_key),"api_key_fingerprint":fingerprint}
 @app.post("/api/v1/run-pipeline")
 def pipeline(x_api_key: str|None=Header(default=None)):
     authorize(x_api_key)

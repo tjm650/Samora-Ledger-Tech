@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function Navbar(){return <header style={{background:"#14213d",color:"white",padding:"18px 5%",display:"flex",justifyContent:"space-between",alignItems:"center"}}><Link href="/" style={{fontWeight:800,letterSpacing:1}}>◈ SAMORA LEDGER TECH</Link><nav style={{display:"flex",gap:22,fontSize:14}}><Link href="/">Overview</Link><Link href="/crm">Customer CRM</Link></nav></header>}

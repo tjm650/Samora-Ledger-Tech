@@ -2,9 +2,11 @@ services:
   - type: web
     name: samora-ledger-analytics
     runtime: docker
+    plan: free
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /health
+    autoDeployTrigger: checksPass
     envVars:
       - key: SUPABASE_URL
         sync: false

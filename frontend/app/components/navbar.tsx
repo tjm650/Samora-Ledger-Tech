@@ -5,7 +5,7 @@ import {usePathname} from "next/navigation";
 import {useState} from "react";
 import {
  Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,
- PanelLeftClose,PanelLeftOpen,X
+ PanelLeftClose,PanelLeftOpen,Menu,X
 } from "lucide-react";
 
 const groups=[
@@ -32,10 +32,6 @@ export default function Navbar(){
  return <>
   <header className="workspace-header">
    <div className="workspace-header-left">
-    <button className="sidebar-toggle desktop-toggle" type="button" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?"Expand navigation":"Collapse navigation"} aria-expanded={!collapsed}>
-     {collapsed?<PanelLeftOpen size={18}/>:<PanelLeftClose size={18}/>}
-    </button>
-    <button className="sidebar-toggle mobile-toggle" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><PanelLeftOpen size={18}/></button>
     <Link href="/" className="workspace-brand" aria-label="Samora Ledger Tech home">
      <span className="brand-mark"><Building2 size={19}/></span>
      <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span><span className="brand-sub">EXECUTIVE INTELLIGENCE</span></span>
@@ -43,9 +39,16 @@ export default function Navbar(){
    </div>
    <div className="header-meta"><span className="system-indicator"><span className="status-dot"/>Executive workspace</span></div>
   </header>
+  {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}
   <aside className={"workspace-sidebar"+(collapsed?" collapsed":"")+(mobileOpen?" mobile-open":"")} aria-label="Main navigation">
-   <div className="sidebar-topline"><span className="sidebar-section-label">WORKSPACE</span><button className="sidebar-close mobile-toggle" type="button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={18}/></button></div>
+   <div className="sidebar-topline">
+    <span className="sidebar-section-label">WORKSPACE</span>
+    <button className="sidebar-toggle desktop-toggle" type="button" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?"Expand navigation":"Collapse navigation"} aria-expanded={!collapsed}>
+     {collapsed?<PanelLeftOpen size={18}/>:<PanelLeftClose size={18}/>}
+    </button>
+    <button className="sidebar-close mobile-toggle" type="button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={18}/></button>
+   </div>
    <nav className="sidebar-nav">
     {groups.map(group=><section className="sidebar-group" key={group.label}>
      <h2 className="sidebar-group-title">{group.label}</h2>

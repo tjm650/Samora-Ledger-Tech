@@ -39,7 +39,8 @@ def fetch_all_insights(db):
 
 def parse_timestamp(value):
     if isinstance(value,datetime): return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-    return datetime.fromisoformat(str(value).replace("Z","+00:00")).astimezone(timezone.utc)
+    stamp=datetime.fromisoformat(str(value).replace("Z","+00:00"))
+    return stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None else stamp.astimezone(timezone.utc)
 
 def fetch_transactions_since(db, cutoff):
     rows=[]; offset=0; page_size=1000

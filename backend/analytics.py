@@ -67,13 +67,25 @@ def run_pipeline():
     url=os.environ["SUPABASE_URL"]; key=os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     db=create_client(url,key)
     customers=db.table("customers").select("customer_id").execute().data or []
+    customer_ids=[x["customer_id"] for x in customers]
     transactions=[]
-    for start in range(0,len(customers),100):
-        ids=[x["customer_id"] for x in customers[start:start+100]]
-        if not ids: continue
-        # PostgREST IN list uses UUID literals; page results to avoid response truncation.
-        for cid in ids:
-            transactions.extend(db.table("transactions").select("*").eq("customer_id",cid).execute().data or [])
+    # Fetch transactions in bounded pages instead of issuing one HTTP request per customer.
+    # PostgREST commonly caps responses at 1,000 rows, so page explicitly and order
+    # by the primary key to keep pagination stable.
+    page_size=1000
+    offset=0
+    while True:
+        response=(db.table("transactions")
+            .select("customer_id,timestamp,amount,transaction_type,merchant_category,post_transaction_balance")
+            .in_("customer_id",customer_ids)
+            .order("transaction_id")
+            .range(offset,offset+page_size-1)
+            .execute())
+        page=response.data or []
+        transactions.extend(page)
+        if len(page)<page_size:
+            break
+        offset+=page_size
     frame=engineer_features(pd.DataFrame(transactions))
     if frame.empty: return {"customers_processed":0}
     features=[]; insights=[]

@@ -33,7 +33,7 @@ export default function Navbar(){
  const pathname=usePathname();
  const [collapsed,setCollapsed]=useState(false);
  const [mobileOpen,setMobileOpen]=useState(false);
- const [sidebarWidth,setSidebarWidth]=useState(210);
+ const [sidebarWidth,setSidebarWidth]=useState(150);
  const resizeStart=useRef<{x:number;width:number}|null>(null);
  useEffect(()=>{
   document.documentElement.style.setProperty("--sidebar-width",`${sidebarWidth}px`);

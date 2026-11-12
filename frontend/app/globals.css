@@ -206,7 +206,7 @@ button{cursor:pointer}
 .workspace-brand-copy{display:block}
 .sidebar-toggle,.sidebar-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:transparent;color:#d4dce5;transition:.18s ease}
 .sidebar-toggle:hover,.sidebar-close:hover{background:rgba(255,255,255,.09);color:#fff}
-.workspace-sidebar{position:fixed;z-index:40;left:0;top:76px;bottom:0;width:264px;display:flex;flex-direction:column;padding:25px 15px 28px;background:#fff;border-right:1px solid #e5ebef;transition:width .2s ease,transform .2s ease;overflow-x:hidden;overflow-y:auto}
+.workspace-sidebar{position:fixed;z-index:40;left:0;top:76px;bottom:0;width:236px;display:flex;flex-direction:column;padding:25px 15px 28px;background:#fff;border-right:1px solid #e5ebef;transition:width .2s ease,transform .2s ease;overflow-x:hidden;overflow-y:auto}
 .sidebar-topline{display:flex;align-items:center;justify-content:space-between;padding:0 11px 17px}
 .sidebar-section-label{font-size:9px;font-weight:800;letter-spacing:.17em;color:#9aa6b3}
 .sidebar-nav{display:flex;flex-direction:column;gap:19px}
@@ -232,7 +232,7 @@ button{cursor:pointer}
 .workspace-sidebar.collapsed .sidebar-active-mark{right:4px}
 .workspace-sidebar.collapsed .sidebar-bottom{justify-content:center;padding-left:0;padding-right:0}
 .workspace-sidebar.collapsed .sidebar-bottom-mark{width:36px;height:36px}
-.main-shell{max-width:none;margin-left:var(--sidebar-width,264px);padding:38px clamp(24px,4vw,62px) 64px;transition:margin-left .2s ease}
+.main-shell{max-width:none;margin-left:var(--sidebar-width,236px);padding:38px clamp(24px,4vw,62px) 64px;transition:margin-left .2s ease}
 body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px}
 .site-footer{width:100%;margin-left:0;position:relative;transition:none}
 .mobile-toggle{display:none}

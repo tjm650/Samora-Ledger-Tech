@@ -206,7 +206,7 @@ button{cursor:pointer}
 .workspace-brand-copy{display:block}
 .sidebar-toggle,.sidebar-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:transparent;color:#d4dce5;transition:.18s ease}
 .sidebar-toggle:hover,.sidebar-close:hover{background:rgba(255,255,255,.09);color:#fff}
-.workspace-sidebar{position:fixed;z-index:40;left:0;top:76px;bottom:0;width:264px;display:flex;flex-direction:column;padding:25px 15px 16px;background:#fff;border-right:1px solid #e5ebef;transition:width .2s ease,transform .2s ease;overflow-x:hidden;overflow-y:auto}
+.workspace-sidebar{position:fixed;z-index:40;left:0;top:76px;bottom:0;width:264px;display:flex;flex-direction:column;padding:25px 15px 28px;background:#fff;border-right:1px solid #e5ebef;transition:width .2s ease,transform .2s ease;overflow-x:hidden;overflow-y:auto}
 .sidebar-topline{display:flex;align-items:center;justify-content:space-between;padding:0 11px 17px}
 .sidebar-section-label{font-size:9px;font-weight:800;letter-spacing:.17em;color:#9aa6b3}
 .sidebar-nav{display:flex;flex-direction:column;gap:19px}
@@ -244,7 +244,7 @@ body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px}
 }
 @media(max-width:760px){
  .workspace-header{height:68px;padding:0 15px}
- .workspace-sidebar,.workspace-sidebar.collapsed{top:0;bottom:0;width:min(300px,86vw)!important;padding:24px 15px 16px;transform:translateX(-105%);z-index:70;box-shadow:12px 0 35px rgba(15,30,45,.13)}
+ .workspace-sidebar,.workspace-sidebar.collapsed{top:0;bottom:0;width:min(300px,86vw)!important;padding:24px 15px 24px;transform:translateX(-105%);z-index:70;box-shadow:12px 0 35px rgba(15,30,45,.13)}
  .workspace-sidebar.mobile-open{transform:translateX(0)}
  .workspace-sidebar.collapsed .sidebar-section-label,.workspace-sidebar.collapsed .sidebar-group-title,.workspace-sidebar.collapsed .sidebar-link span,.workspace-sidebar.collapsed .sidebar-bottom-copy{display:initial}
  .workspace-sidebar.collapsed .sidebar-group-title{display:block}

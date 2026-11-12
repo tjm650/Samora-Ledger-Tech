@@ -1,13 +1,13 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useCallback,useEffect,useState} from "react";
 import {Activity,ArrowDownLeft,ArrowUpRight,RefreshCw,ShieldAlert,TrendingUp} from "lucide-react";
 import {Bar,BarChart,CartesianGrid,Cell,Line,LineChart,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 import {amount,getExecutiveOverview,number,type ExecutiveOverview} from "@/lib/executive";
 const riskColors=["#21836f","#d7a34b","#bd6259"];
 export default function Home(){
  const [data,setData]=useState<ExecutiveOverview|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [running,setRunning]=useState(false);const [notice,setNotice]=useState("");
- async function load(){setLoading(true);setError("");try{setData(await getExecutiveOverview(90))}catch(e){setError(e instanceof Error?e.message:"Unable to load executive analytics")}finally{setLoading(false)}}
- useEffect(()=>{void load()},[]);
+ const load=useCallback(async()=>{setLoading(true);setError("");try{setData(await getExecutiveOverview(90))}catch(e){setError(e instanceof Error?e.message:"Unable to load executive analytics")}finally{setLoading(false)}},[]);
+ useEffect(()=>{void load()},[load]);
  async function runPipeline(){setRunning(true);setNotice("");setError("");try{const r=await fetch("/api/pipeline",{method:"POST"});const body=await r.json();if(!r.ok)throw new Error(body.error||"Analytics run failed");setNotice("Analytics pipeline completed. Executive indicators have been refreshed.");await load()}catch(e){setError(e instanceof Error?e.message:"Unable to run analytics")}finally{setRunning(false)}}
  const m=data?.metrics;
  const kpis=[

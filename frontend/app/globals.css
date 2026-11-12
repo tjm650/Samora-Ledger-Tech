@@ -265,3 +265,10 @@ body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px}
  .brand-sub{font-size:9px}
 }
 @media(max-width:420px){.workspace-header{gap:8px}.workspace-header-left{gap:10px}.workspace-brand{gap:8px}.workspace-header .brand-mark{width:32px;height:32px}.header-meta .system-indicator{font-size:0;gap:0}.header-meta .status-dot{width:8px;height:8px}}
+
+/* Navigation controls live with the sidebar, not in the workspace header */
+.sidebar-topline .sidebar-toggle{flex:0 0 auto}
+.workspace-sidebar.collapsed .sidebar-topline{gap:0}
+.sidebar-open-fab{position:fixed;top:82px;left:12px;z-index:55;width:40px;height:40px;place-items:center;border:1px solid #dce5e9;border-radius:10px;background:#fff;color:#176f69;box-shadow:0 5px 18px rgba(20,36,59,.12)}
+@media(min-width:761px){.sidebar-open-fab{display:none!important}}
+@media(max-width:760px){.sidebar-open-fab{display:grid}}

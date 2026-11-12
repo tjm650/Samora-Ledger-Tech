@@ -1,0 +1,8 @@
+import {SlidersHorizontal,PanelLeft,ShieldCheck} from "lucide-react";
+export default function SettingsPage(){return <>
+ <div className="page-heading"><div><p className="eyebrow">Workspace preferences</p><h1 className="page-title">Settings</h1><p className="page-subtitle">Workspace layout and operating information.</p></div></div>
+ <div className="governance-grid">
+  <section className="panel"><SlidersHorizontal size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Navigation layout</h2><p className="panel-caption">Personalise the navigation sidebar from any workspace page.</p><ul className="business-list"><li>Drag the sidebar's right edge to adjust its width between 220 and 420 pixels.</li><li>Use the collapse control to switch to compact icon navigation.</li><li>Keyboard users can focus the resize handle and use the left and right arrow keys.</li><li>On mobile, the sidebar opens as a full-height drawer.</li></ul></section>
+  <section className="panel"><ShieldCheck size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Access and security</h2><p className="panel-caption">Authentication is currently in a temporary open-access configuration as requested. Anyone with the deployed workspace URL may be able to view its executive dashboard.</p><p className="governance-footnote">Restore staff authentication and role-based access controls before using this workspace with confidential or production banking information.</p></section>
+ </div>
+ </>}

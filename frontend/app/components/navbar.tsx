@@ -5,7 +5,7 @@ import {usePathname} from "next/navigation";
 import {useEffect,useRef,useState} from "react";
 import {
  Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,
- PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings
+ PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings,UserRound,ChevronDown
 } from "lucide-react";
 
 const groups=[
@@ -80,7 +80,12 @@ export default function Navbar(){
     </section>)}
    </nav>
    {!collapsed&&<div className="sidebar-resize-handle" role="separator" aria-label="Resize navigation sidebar" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onPointerDown={beginResize} onPointerMove={resizeSidebar} onPointerUp={endResize} onPointerCancel={endResize} onKeyDown={adjustSidebar}><span/></div>}
-   <div className="sidebar-bottom"><span className="sidebar-bottom-mark"><Building2 size={15}/></span><span className="sidebar-bottom-copy"><strong>Samora Ledger Tech</strong><small>Banking intelligence platform</small></span></div>
+   <div className="sidebar-user" aria-label="Signed-in user">
+    <span className="sidebar-user-avatar"><UserRound size={17}/></span>
+    <span className="sidebar-user-copy"><small>Signed in as</small><strong>Executive user</strong></span>
+    <span className="sidebar-user-status" aria-label="Signed-in session active"/>
+    <ChevronDown className="sidebar-user-chevron" size={15}/>
+   </div>
   </aside>
  </>;
 }

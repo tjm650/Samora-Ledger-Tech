@@ -78,7 +78,7 @@ export default function Navbar(){
      {group.items.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={collapsed?item.label:undefined} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
     </section>)}
    </nav>
-   {!collapsed&&<div className="sidebar-resize-handle" role="separator" aria-label="Resize navigation sidebar" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onPointerDown={beginResize} onPointerMove={resizeSidebar} onPointerUp={endResize} onPointerCancel={endResize} onKeyDown={adjustSidebar}><span/></div>}
+   {!collapsed&&<div className="sidebar-resize-handle" role="separator" aria-label="Resize navigation sidebar" aria-orientation="vertical" aria-valuemin={200} aria-valuemax={380} aria-valuenow={sidebarWidth} tabIndex={0} onPointerDown={beginResize} onPointerMove={resizeSidebar} onPointerUp={endResize} onPointerCancel={endResize} onKeyDown={adjustSidebar}><span/></div>}
    <div className="sidebar-user" aria-label="Signed-in user">
     <span className="sidebar-user-avatar"><UserRound size={17}/></span>
     <span className="sidebar-user-copy"><small>Signed in as</small><strong>Executive user</strong></span>

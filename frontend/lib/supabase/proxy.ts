@@ -12,7 +12,8 @@ export async function updateSession(request:NextRequest){
  }
  let response=NextResponse.next({request});
  const supabase=createServerClient(url,key,{cookies:{getAll(){return request.cookies.getAll()},setAll(cookiesToSet){cookiesToSet.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookiesToSet.forEach(({name,value,options})=>response.cookies.set(name,value,options))}}});
- const {data:{claims}}=await supabase.auth.getClaims();
+ const {data,error}=await supabase.auth.getClaims();
+ const claims=error?null:data?.claims??null;
  const role=(claims?.app_metadata as Record<string,unknown>|undefined)?.role;
  const authorised=Boolean(claims&&typeof role==="string"&&allowedRoles.includes(role));
  if(pathname==="/login"){if(authorised){const target=request.nextUrl.clone();target.pathname="/";target.search="";return NextResponse.redirect(target)}return response}

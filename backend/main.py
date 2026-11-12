@@ -1,5 +1,5 @@
 from __future__ import annotations
-import logging, os, secrets
+import logging, os, secrets, time
 from datetime import datetime, timedelta, timezone
 from collections import Counter, defaultdict
 from dotenv import load_dotenv
@@ -11,6 +11,8 @@ load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO"))
 log=logging.getLogger("samora")
 app=FastAPI(title="Samora Ledger Tech API",version="1.1.0")
+_OVERVIEW_CACHE:dict[int,tuple[float,dict]]={}
+_OVERVIEW_CACHE_TTL_SECONDS=30
 origins=[x.strip() for x in os.getenv("API_CORS_ORIGINS","http://localhost:3000").split(",") if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=True,allow_methods=["GET","POST"],allow_headers=["Authorization","Content-Type","X-API-Key"])
 
@@ -114,7 +116,9 @@ def health():
 @app.post("/api/v1/run-pipeline")
 def pipeline(x_api_key: str|None=Header(default=None)):
     authorize(x_api_key)
-    try:return {"status":"completed",**run_pipeline()}
+    try:
+        result=run_pipeline(); _OVERVIEW_CACHE.clear()
+        return {"status":"completed",**result}
     except Exception as exc:
         log.exception("Analytics pipeline failed")
         raise HTTPException(500,"Pipeline failed; inspect service logs") from exc
@@ -123,10 +127,14 @@ def pipeline(x_api_key: str|None=Header(default=None)):
 def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:str|None=Header(default=None)):
     authorize(x_api_key)
     try:
+        cached=_OVERVIEW_CACHE.get(period_days)
+        if cached and time.monotonic()-cached[0]<_OVERVIEW_CACHE_TTL_SECONDS: return cached[1]
         now=datetime.now(timezone.utc); db=get_database()
         transactions=fetch_transactions_since(db,now-timedelta(days=period_days))
         insights=fetch_all_insights(db)
-        return build_executive_overview(transactions,insights,now,period_days)
+        result=build_executive_overview(transactions,insights,now,period_days)
+        _OVERVIEW_CACHE[period_days]=(time.monotonic(),result)
+        return result
     except HTTPException: raise
     except Exception as exc:
         log.exception("Executive overview retrieval failed")

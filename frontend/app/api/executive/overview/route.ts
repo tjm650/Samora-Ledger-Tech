@@ -1,6 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
+import {requireExecutiveAccess} from "@/lib/auth";
 export const dynamic="force-dynamic";
 export async function GET(request:NextRequest){
+ const access=await requireExecutiveAccess();if(access.response)return access.response;
  const base=process.env.SAMORA_API_URL;const key=process.env.SAMORA_API_KEY;
  if(!base||!key)return NextResponse.json({error:"The Samora API connection is not configured on the server."},{status:503});
  const requested=Number(request.nextUrl.searchParams.get("period_days")||90);const period=Number.isFinite(requested)?Math.min(365,Math.max(30,Math.floor(requested))):90;

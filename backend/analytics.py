@@ -69,23 +69,25 @@ def run_pipeline():
     customers=db.table("customers").select("customer_id").execute().data or []
     customer_ids=[x["customer_id"] for x in customers]
     transactions=[]
-    # Fetch transactions in bounded pages instead of issuing one HTTP request per customer.
-    # PostgREST commonly caps responses at 1,000 rows, so page explicitly and order
-    # by the primary key to keep pagination stable.
+    # Keep each customer-ID filter small enough to avoid oversized PostgREST URLs.
+    # Page each group in stable primary-key order because responses are capped.
+    customer_batch_size=50
     page_size=1000
-    offset=0
-    while True:
-        response=(db.table("transactions")
-            .select("customer_id,timestamp,amount,transaction_type,merchant_category,post_transaction_balance")
-            .in_("customer_id",customer_ids)
-            .order("transaction_id")
-            .range(offset,offset+page_size-1)
-            .execute())
-        page=response.data or []
-        transactions.extend(page)
-        if len(page)<page_size:
-            break
-        offset+=page_size
+    for customer_start in range(0,len(customer_ids),customer_batch_size):
+        customer_batch=customer_ids[customer_start:customer_start+customer_batch_size]
+        offset=0
+        while True:
+            response=(db.table("transactions")
+                .select("customer_id,timestamp,amount,transaction_type,merchant_category,post_transaction_balance")
+                .in_("customer_id",customer_batch)
+                .order("transaction_id")
+                .range(offset,offset+page_size-1)
+                .execute())
+            page=response.data or []
+            transactions.extend(page)
+            if len(page)<page_size:
+                break
+            offset+=page_size
     frame=engineer_features(pd.DataFrame(transactions))
     if frame.empty: return {"customers_processed":0}
     features=[]; insights=[]

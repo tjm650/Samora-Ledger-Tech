@@ -1,6 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
+import {requireExecutiveAccess} from "@/lib/auth";
 export const dynamic="force-dynamic";
 export async function GET(request:NextRequest){
+ const access=await requireExecutiveAccess();if(access.response)return access.response;
  const base=process.env.SAMORA_API_URL;const key=process.env.SAMORA_API_KEY;
  if(!base||!key)return NextResponse.json({error:"The Samora API connection is not configured on the server."},{status:503});
  const params=new URLSearchParams();for(const name of ["limit","offset","transaction_type","category"]){const value=request.nextUrl.searchParams.get(name);if(value)params.set(name,value)}

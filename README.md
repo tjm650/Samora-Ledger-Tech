@@ -12,8 +12,8 @@ Enterprise Banking Transaction Analytics & Action Engine MVP.
 1. Create a disposable Supabase project and apply `database/schema.sql` in the SQL editor.
 2. Copy `backend/.env.example` to `backend/.env`, set the project URL and service-role key. Never expose the service-role key to the browser.
 3. From `backend`: `python -m venv .venv && pip install -r requirements.txt`; run `ALLOW_DEMO_SEEDING=true python data_seeder.py` only on a disposable demo database; start API with `uvicorn main:app --reload`.
-4. Copy `frontend/.env.example` to `frontend/.env.local`, set the Supabase URL and anon key, then from `frontend`: `npm install && npm run dev`.
-5. Configure `API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and allowed CORS origins in Render. Set Vercel root directory to `frontend`.
+4. Copy `frontend/.env.example` to `frontend/.env.local`, set `SAMORA_API_URL` to the Render service base URL and `SAMORA_API_KEY` to the Render `API_KEY` value, then from `frontend`: `npm install && npm run dev`. Keep both variables server-side (never prefix them with `NEXT_PUBLIC_`). The optional Supabase anon variables are only needed for separately approved browser-side Supabase features.
+5. Configure `API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and allowed CORS origins in Render. In Vercel, set root directory to `frontend` and configure server-side `SAMORA_API_URL` and `SAMORA_API_KEY` with the Render service URL and Render `API_KEY` value. Never expose either key in browser variables.
 
 ## API
 - `GET /health`

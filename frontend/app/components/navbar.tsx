@@ -33,7 +33,7 @@ export default function Navbar(){
  const pathname=usePathname();
  const [collapsed,setCollapsed]=useState(false);
  const [mobileOpen,setMobileOpen]=useState(false);
- const [sidebarWidth,setSidebarWidth]=useState(264);
+ const [sidebarWidth,setSidebarWidth]=useState(236);
  const resizeStart=useRef<{x:number;width:number}|null>(null);
  useEffect(()=>{
   document.documentElement.style.setProperty("--sidebar-width",`${sidebarWidth}px`);
@@ -46,12 +46,12 @@ export default function Navbar(){
  };
  const resizeSidebar=(event:React.PointerEvent<HTMLDivElement>)=>{
   if(!resizeStart.current)return;
-  setSidebarWidth(Math.min(420,Math.max(220,resizeStart.current.width+event.clientX-resizeStart.current.x)));
+  setSidebarWidth(Math.min(380,Math.max(200,resizeStart.current.width+event.clientX-resizeStart.current.x)));
  };
  const endResize=()=>{resizeStart.current=null};
  const adjustSidebar=(event:React.KeyboardEvent<HTMLDivElement>)=>{
-  if(event.key==="ArrowLeft")setSidebarWidth(width=>Math.max(220,width-10));
-  if(event.key==="ArrowRight")setSidebarWidth(width=>Math.min(420,width+10));
+  if(event.key==="ArrowLeft")setSidebarWidth(width=>Math.max(200,width-10));
+  if(event.key==="ArrowRight")setSidebarWidth(width=>Math.min(380,width+10));
  };
  return <>
   <header className="workspace-header">
@@ -61,7 +61,6 @@ export default function Navbar(){
      <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span><span className="brand-sub">EXECUTIVE INTELLIGENCE</span></span>
     </Link>
    </div>
-   <div className="header-meta"><span className="system-indicator"><span className="status-dot"/>Executive workspace</span></div>
   </header>
   {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}

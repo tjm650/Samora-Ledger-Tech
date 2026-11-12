@@ -312,3 +312,28 @@ body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px}
 .footer-links a:hover{color:#8bd3ca}
 .footer-bottom{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:17px;border-top:1px solid rgba(255,255,255,.13);color:#91a2b3;font-size:10px;line-height:1.6}
 @media(max-width:650px){.footer-inner{padding:30px 5% 18px}.footer-main{flex-direction:column;gap:26px;padding-bottom:23px}.footer-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px}.footer-links-heading{grid-column:1/-1}}
+
+/* Sidebar scrolling without a visible scrollbar; align footer with the content column */
+.workspace-sidebar{
+ scrollbar-width:none;
+ -ms-overflow-style:none;
+}
+.workspace-sidebar::-webkit-scrollbar{
+ display:none;
+ width:0;
+ height:0;
+}
+.site-footer{
+ width:calc(100% - var(--sidebar-width,210px));
+ margin-left:var(--sidebar-width,210px);
+}
+body:has(.workspace-sidebar.collapsed) .site-footer{
+ width:calc(100% - 76px);
+ margin-left:76px;
+}
+@media(max-width:760px){
+ .site-footer,body:has(.workspace-sidebar.collapsed) .site-footer{
+  width:100%;
+  margin-left:0;
+ }
+}

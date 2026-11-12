@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib, logging, os, secrets
+import logging, os, secrets
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,9 +17,7 @@ def authorize(x_api_key: str|None):
     if not x_api_key or not secrets.compare_digest(x_api_key,expected): raise HTTPException(401,"Invalid API key")
 @app.get("/health")
 def health():
-    configured_key=os.getenv("API_KEY","")
-    fingerprint=hashlib.sha256(configured_key.encode("utf-8")).hexdigest()[:12] if configured_key else None
-    return {"status":"ok","service":"samora-ledger-tech","api_key_length":len(configured_key),"api_key_fingerprint":fingerprint}
+    return {"status":"ok","service":"samora-ledger-tech"}
 @app.post("/api/v1/run-pipeline")
 def pipeline(x_api_key: str|None=Header(default=None)):
     authorize(x_api_key)
@@ -44,6 +42,29 @@ def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
     except Exception as exc:
         log.exception("Demo seed and analytics run failed")
         raise HTTPException(500,"Demo seed or analytics run failed; inspect service logs") from exc
+
+@app.get("/api/v1/customers")
+def list_customers(x_api_key: str|None=Header(default=None)):
+    """Return the CRM portfolio through the trusted server-side Supabase client."""
+    authorize(x_api_key)
+    try:
+        from supabase import create_client
+        db=create_client(os.environ["SUPABASE_URL"],os.environ["SUPABASE_SERVICE_ROLE_KEY"])
+        customers=(db.table("customers")
+            .select("customer_id,full_name,email,account_tier,created_at")
+            .order("full_name")
+            .range(0,999).execute().data or [])
+        insights=(db.table("predictive_insights")
+            .select("customer_id,churn_risk_score,primary_churn_driver,recommended_product,prescriptive_action,evaluated_at")
+            .range(0,999).execute().data or [])
+        by_customer={row["customer_id"]:row for row in insights}
+        for customer in customers:
+            insight=by_customer.get(customer["customer_id"])
+            customer["predictive_insights"]=[insight] if insight else []
+        return {"customers":customers,"count":len(customers)}
+    except Exception as exc:
+        log.exception("Customer portfolio retrieval failed")
+        raise HTTPException(500,"Unable to retrieve customer portfolio") from exc
 
 @app.get("/api/v1/explain/{customer_id}")
 def explain(customer_id:str,x_api_key:str|None=Header(default=None)):

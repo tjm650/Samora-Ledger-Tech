@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {Download,Printer,FileBarChart,CalendarClock} from "lucide-react";
+import {Download,Printer,FileBarChart,Calendar} from "lucide-react";
 import {amount,getExecutiveOverview,number,type ExecutiveOverview} from "@/lib/executive";
 export default function ReportsPage(){
  const [data,setData]=useState<ExecutiveOverview|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
@@ -11,7 +11,7 @@ export default function ReportsPage(){
   <div className="page-heading"><div><p className="eyebrow">Management information / Reporting</p><h1 className="page-title">Management Reports</h1><p className="page-subtitle">A concise executive briefing generated from the latest available transaction and risk analytics.</p></div><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>window.print()} disabled={!data}><Printer size={14}/>Print / Save PDF</button><button className="btn" onClick={exportCsv} disabled={!data}><Download size={14}/>Export report data</button></div></div>
   {error&&<div className="alert" role="alert">{error}</div>}
   {loading?<div className="panel empty-state">Preparing management report…</div>:data&&<>
-   <article className="report-sheet"><div className="report-cover"><div><span className="report-brand">SAMORA LEDGER TECH</span><p className="eyebrow" style={{marginTop:28,color:"#8ed0c5"}}>Executive intelligence</p><h2>Management<br/>Performance Brief</h2><p>Transaction activity · Portfolio-level risk · Operational trends</p></div><div className="report-date"><CalendarClock size={14}/><span>Generated<br/><strong>{new Date(data.generated_at).toLocaleString()}</strong></span></div></div>
+   <article className="report-sheet"><div className="report-cover"><div><span className="report-brand">SAMORA LEDGER TECH</span><p className="eyebrow" style={{marginTop:28,color:"#8ed0c5"}}>Executive intelligence</p><h2>Management<br/>Performance Brief</h2><p>Transaction activity · Portfolio-level risk · Operational trends</p></div><div className="report-date"><Calendar size={14}/><span>Generated<br/><strong>{new Date(data.generated_at).toLocaleString()}</strong></span></div></div>
     <div className="report-body"><div className="report-section-head"><div><span className="report-kicker">01 / Executive snapshot</span><h3>Key indicators</h3></div><span className="panel-period">LAST 30 DAYS</span></div>
      <div className="report-metric-grid"><div><span>Transaction count</span><strong>{number(m?.transactions_30d||0)}</strong></div><div><span>Debit volume</span><strong>{amount(m?.debit_volume_30d||0)}</strong></div><div><span>Credit volume</span><strong>{amount(m?.credit_volume_30d||0)}</strong></div><div><span>Net transaction flow</span><strong>{amount(m?.net_flow_30d||0)}</strong></div></div>
      <div className="report-section-head"><div><span className="report-kicker">02 / Risk oversight</span><h3>Aggregate risk position</h3></div></div>

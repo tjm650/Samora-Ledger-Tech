@@ -11,7 +11,7 @@ const chartColors=["#177c77","#447b9a","#d7a34b","#b85c55","#8291a4","#7b73a8"];
 
 export default function Home(){
  const [rows,setRows]=useState<Customer[]>([]);const [customers,setCustomers]=useState(0);const [error,setError]=useState("");const [loading,setLoading]=useState(true);const [running,setRunning]=useState(false);const [notice,setNotice]=useState("");
- const loadPortfolio=useCallback(async()=>{setLoading(true);setError("");try{const r=await fetch("/api/customers",{cache:"no-store"});const body:Portfolio|{error:string}=await r.json();if(!r.ok)throw new Error("error" in body?body.error:"Unable to load portfolio");setRows(body.customers||[]);setCustomers(body.count||0)}catch(e){setError(e instanceof Error?e.message:"Unable to load portfolio")}finally{setLoading(false)}},[]);
+ const loadPortfolio=useCallback(async()=>{setLoading(true);setError("");try{const r=await fetch("/api/customers",{cache:"no-store"});const body=await r.json() as Portfolio & {error?:string};if(!r.ok)throw new Error(body.error||"Unable to load portfolio");setRows(body.customers||[]);setCustomers(body.count||0)}catch(e){setError(e instanceof Error?e.message:"Unable to load portfolio")}finally{setLoading(false)}},[]);
  useEffect(()=>{void loadPortfolio()},[loadPortfolio]);
  const insights=useMemo(()=>rows.map(x=>x.predictive_insights?.[0]).filter(Boolean) as Insight[],[rows]);
  const high=insights.filter(x=>Number(x.churn_risk_score)>=60).length;

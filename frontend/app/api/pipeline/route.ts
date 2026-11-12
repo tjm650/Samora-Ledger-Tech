@@ -1,8 +1,10 @@
 import {NextResponse} from "next/server";
+import {requireExecutiveAccess} from "@/lib/auth";
 
 export const dynamic="force-dynamic";
 
 export async function POST(){
+ const access=await requireExecutiveAccess();if(access.response)return access.response;
  const baseUrl=process.env.SAMORA_API_URL;
  const apiKey=process.env.SAMORA_API_KEY;
  if(!baseUrl||!apiKey)return NextResponse.json({error:"The Samora API connection is not configured on the server."},{status:503});

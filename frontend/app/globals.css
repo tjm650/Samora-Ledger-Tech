@@ -197,3 +197,74 @@ button{cursor:pointer}
 .login-security svg{color:#177d77;flex:0 0 auto}
 .login-footer{margin:19px 0 0;color:#95a2b0;font-size:9px;letter-spacing:.14em;text-align:center}
 @media(max-width:600px){.login-card{padding:25px 21px}.header-meta{display:flex}.signout-button span{display:none}.signout-button{padding:8px}.header-inner{align-items:center}}
+
+
+/* Hideable executive workspace sidebar */
+.workspace-header{height:76px;position:sticky;top:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 30px;background:rgba(18,35,57,.98);color:#fff;border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(14px)}
+.workspace-header-left{display:flex;align-items:center;gap:17px;min-width:0}
+.workspace-brand{display:flex;align-items:center;gap:11px;min-width:max-content}
+.workspace-brand-copy{display:block}
+.sidebar-toggle,.sidebar-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:transparent;color:#d4dce5;transition:.18s ease}
+.sidebar-toggle:hover,.sidebar-close:hover{background:rgba(255,255,255,.09);color:#fff}
+.workspace-sidebar{position:fixed;z-index:40;left:0;top:76px;bottom:0;width:264px;display:flex;flex-direction:column;padding:25px 15px 16px;background:#fff;border-right:1px solid #e5ebef;transition:width .2s ease,transform .2s ease;overflow-x:hidden;overflow-y:auto}
+.sidebar-topline{display:flex;align-items:center;justify-content:space-between;padding:0 11px 17px}
+.sidebar-section-label{font-size:9px;font-weight:800;letter-spacing:.17em;color:#9aa6b3}
+.sidebar-nav{display:flex;flex-direction:column;gap:19px}
+.sidebar-group{display:flex;flex-direction:column;gap:4px}
+.sidebar-group-title{margin:0 10px 6px;color:#8a98a8;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.sidebar-link{position:relative;display:flex;align-items:center;gap:12px;min-height:42px;padding:0 11px;border-radius:8px;color:#607286;font-size:12px;font-weight:600;white-space:nowrap;transition:background .16s ease,color .16s ease}
+.sidebar-link svg{flex:0 0 auto;color:#8291a1}
+.sidebar-link:hover{background:#f3f7f8;color:#1c354b}
+.sidebar-link.active{background:#eaf4f2;color:#126c66;font-weight:700}
+.sidebar-link.active svg{color:#147d78}
+.sidebar-active-mark{position:absolute;right:10px;width:5px;height:5px;border-radius:50%;background:#147d78}
+.sidebar-bottom{display:flex;align-items:center;gap:10px;margin-top:auto;padding:17px 9px 5px;border-top:1px solid #edf1f4}
+.sidebar-bottom-mark{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;border-radius:8px;background:#edf5f4;color:#147d78}
+.sidebar-bottom-copy{display:flex;flex-direction:column;gap:3px;white-space:nowrap}
+.sidebar-bottom-copy strong{font-size:10px;color:#344a60}
+.sidebar-bottom-copy small{font-size:9px;color:#8a98a7}
+.workspace-sidebar.collapsed{width:76px;padding-left:10px;padding-right:10px}
+.workspace-sidebar.collapsed .sidebar-topline{justify-content:center;padding-left:0;padding-right:0}
+.workspace-sidebar.collapsed .sidebar-section-label,.workspace-sidebar.collapsed .sidebar-group-title,.workspace-sidebar.collapsed .sidebar-link span,.workspace-sidebar.collapsed .sidebar-bottom-copy{display:none}
+.workspace-sidebar.collapsed .sidebar-nav{gap:15px}
+.workspace-sidebar.collapsed .sidebar-group{align-items:center}
+.workspace-sidebar.collapsed .sidebar-link{width:46px;justify-content:center;padding:0}
+.workspace-sidebar.collapsed .sidebar-active-mark{right:4px}
+.workspace-sidebar.collapsed .sidebar-bottom{justify-content:center;padding-left:0;padding-right:0}
+.workspace-sidebar.collapsed .sidebar-bottom-mark{width:36px;height:36px}
+.main-shell{max-width:none;margin-left:264px;padding:38px clamp(24px,4vw,62px) 64px;transition:margin-left .2s ease}
+body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px}
+.site-footer{margin-left:264px;transition:margin-left .2s ease}
+body:has(.workspace-sidebar.collapsed) .site-footer{margin-left:76px}
+.mobile-toggle{display:none}
+.sidebar-scrim{display:none}
+@media(max-width:1050px){
+ .workspace-header{padding:0 22px}
+ .workspace-sidebar{width:245px}
+ .main-shell{margin-left:245px;padding-left:26px;padding-right:26px}
+ .site-footer{margin-left:245px}
+ body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px}
+ body:has(.workspace-sidebar.collapsed) .site-footer{margin-left:76px}
+}
+@media(max-width:760px){
+ .workspace-header{height:68px;padding:0 15px}
+ .workspace-sidebar,.workspace-sidebar.collapsed{top:0;bottom:0;width:min(300px,86vw);padding:24px 15px 16px;transform:translateX(-105%);z-index:70;box-shadow:12px 0 35px rgba(15,30,45,.13)}
+ .workspace-sidebar.mobile-open{transform:translateX(0)}
+ .workspace-sidebar.collapsed .sidebar-section-label,.workspace-sidebar.collapsed .sidebar-group-title,.workspace-sidebar.collapsed .sidebar-link span,.workspace-sidebar.collapsed .sidebar-bottom-copy{display:initial}
+ .workspace-sidebar.collapsed .sidebar-group-title{display:block}
+ .workspace-sidebar.collapsed .sidebar-link{width:auto;justify-content:flex-start;padding:0 11px}
+ .workspace-sidebar.collapsed .sidebar-bottom{justify-content:flex-start;padding-left:9px;padding-right:9px}
+ .workspace-sidebar.collapsed .sidebar-bottom-copy{display:flex}
+ .workspace-sidebar.collapsed .sidebar-topline{justify-content:space-between}
+ .mobile-toggle{display:grid}
+ .desktop-toggle{display:none}
+ .sidebar-close{border-color:#e4eaf0;color:#6e7e8e}
+ .sidebar-scrim{display:block;position:fixed;inset:0;z-index:65;border:0;background:rgba(12,25,40,.42)}
+ .main-shell,body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:0;padding:27px 4% 45px}
+ .site-footer,body:has(.workspace-sidebar.collapsed) .site-footer{margin-left:0}
+ .header-meta{display:flex}
+ .system-indicator{font-size:10px;padding:7px 9px}
+ .brand-name{font-size:11px}
+ .brand-sub{font-size:9px}
+}
+@media(max-width:420px){.workspace-header{gap:8px}.workspace-header-left{gap:10px}.workspace-brand{gap:8px}.workspace-header .brand-mark{width:32px;height:32px}.header-meta .system-indicator{font-size:0;gap:0}.header-meta .status-dot{width:8px;height:8px}}

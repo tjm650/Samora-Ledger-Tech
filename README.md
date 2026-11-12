@@ -1,10 +1,10 @@
 # Samora Ledger Tech
-Enterprise Banking Transaction Analytics & Action Engine MVP.
+Enterprise Banking Transaction Analytics & Executive Decision-Support MVP.
 
 ## Source layout
 - `database/schema.sql` — Supabase PostgreSQL tables, constraints, indexes and RLS.
 - `backend/` — Python 3.11 FastAPI service, synthetic data seeder and analytics pipeline.
-- `frontend/` — Next.js App Router dashboard, operational CRM and customer detail view.
+- `frontend/` — Next.js App Router executive workspace: overview, transaction activity, risk and exposure, analytics and trends, management reports, and model governance. The website is designed for banking executive staff and does not expose a CRM or customer portfolio interface.
 - `render.yaml` — Render deployment blueprint.
 - `.github/workflows/ci.yml` — backend tests and frontend type-check workflow.
 
@@ -18,7 +18,7 @@ Enterprise Banking Transaction Analytics & Action Engine MVP.
 ## API
 - `GET /health`
 - `POST /api/v1/run-pipeline` with `X-API-Key`
-- `GET /api/v1/explain/{customer_id}` with `X-API-Key`
+- `GET /api/v1/explain/{customer_id}` (internal compatibility endpoint; not exposed in the executive website)
 
 ## Important model and security limitations
 This MVP uses transparent rule-based risk scoring rather than a trained production classifier. It does not estimate revenue-at-risk because account margin/revenue data is not part of the requested schema. Explanations are not SHAP values. Synthetic cohort patterns are not validated churn labels. Before real use, replace the scoring baseline with outcome-labelled temporal model training, calibration, independent validation, fairness and drift testing, governance, access review and human oversight. Product offers require suitability, eligibility and consent controls. Restrict portfolio roles through trusted Supabase `app_metadata`; never grant those roles from user-editable metadata. Seeder is demo-only and must never run against production customer data.

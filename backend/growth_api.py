@@ -208,3 +208,36 @@ def business_intelligence_assistant(payload:AssistantQuestion,x_api_key:str|None
     except Exception as exc:
         raise HTTPException(502,"Unable to generate an AI business insight") from exc
     return {"answer":answer,"model":model,"context_scope":"aggregate portfolio data only","generated_at":datetime.now(timezone.utc).isoformat()}
+
+@router.get("/products")
+def list_products(x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    _staff(x_api_key,authorization)
+    rows=get_database().table("banking_products").select("*").eq("is_active",True).order("product_category").execute().data or []
+    return {"products":rows}
+
+@router.get("/customers/{customer_id}/products")
+def customer_products(customer_id:str,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    _staff(x_api_key,authorization)
+    db=get_database()
+    owned=db.table("customer_products").select("*").eq("customer_id",customer_id).order("created_at",desc=True).execute().data or []
+    ids=[x["product_id"] for x in owned]
+    products=db.table("banking_products").select("product_id,product_name,product_category,product_tier").in_("product_id",ids).execute().data or [] if ids else []
+    lookup={p["product_id"]:p for p in products}
+    return {"products":[{**x,"product":lookup.get(x["product_id"],{})} for x in owned]}
+
+class ChurnOutcomeInput(BaseModel):
+    outcome_date:date
+    outcome:Literal["churned","retained","reactivated","unknown"]
+    evidence_source:str|None=None
+    notes:str|None=None
+
+@router.post("/customers/{customer_id}/churn-outcomes")
+def record_churn_outcome(customer_id:str,payload:ChurnOutcomeInput,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    actor=_staff(x_api_key,authorization,True)
+    db=get_database()
+    row={"customer_id":customer_id,**payload.model_dump(mode="json"),"recorded_by":str(actor.id) if actor else None}
+    try:
+        saved=db.table("customer_churn_outcomes").upsert(row,on_conflict="customer_id,outcome_date").execute().data or []
+    except Exception as exc:
+        raise HTTPException(400,"Unable to save the verified churn outcome") from exc
+    return {"outcome":saved[0] if saved else row}

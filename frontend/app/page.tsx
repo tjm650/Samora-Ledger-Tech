@@ -8,6 +8,13 @@ export default function Home(){
  const [data,setData]=useState<ExecutiveOverview|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [running,setRunning]=useState(false);const [notice,setNotice]=useState("");
  const load=useCallback(async()=>{setLoading(true);setError("");try{setData(await getExecutiveOverview(90))}catch(e){setError(e instanceof Error?e.message:"Unable to load executive analytics")}finally{setLoading(false)}},[]);
  useEffect(()=>{void load()},[load]);
+ useEffect(()=>{
+  const refresh=()=>{void load()};
+  const run=()=>{void runPipeline()};
+  window.addEventListener("samora:refresh-overview",refresh);
+  window.addEventListener("samora:run-analytics",run);
+  return ()=>{window.removeEventListener("samora:refresh-overview",refresh);window.removeEventListener("samora:run-analytics",run)};
+ },[load]);
  async function runPipeline(){setRunning(true);setNotice("");setError("");try{const r=await fetch("/api/pipeline",{method:"POST"});const body=await r.json();if(!r.ok)throw new Error(body.error||"Analytics run failed");setNotice("Analytics pipeline completed. Executive indicators have been refreshed.");await load()}catch(e){setError(e instanceof Error?e.message:"Unable to run analytics")}finally{setRunning(false)}}
  const m=data?.metrics;
  const kpis=[
@@ -17,7 +24,6 @@ export default function Home(){
   {label:"High-risk exposure",value:m?m.high_risk_share_pct.toFixed(1)+"%":"—",note:m?number(m.high_risk_relationships)+" relationships in high-risk band":"Risk scoring not available",icon:ShieldAlert}
  ];
  return <>
-  <div className="page-heading page-heading-actions"><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/>Refresh</button><button className="btn" onClick={runPipeline} disabled={running}><Activity size={14}/>{running?"Running analytics…":"Run analytics"}</button></div></div>
   {error&&<div className="alert" role="alert">{error}</div>}{notice&&<div className="success-note" role="status">{notice}</div>}
   <div className="kpi-grid">{kpis.map(({label,value,note,icon:Icon},idx)=><div className="kpi-card" key={label}><div className="kpi-label"><Icon size={14} style={{display:"inline",verticalAlign:"-2px",marginRight:7}}/>{label}</div><div className="kpi-value">{loading?"—":value}</div><div className="kpi-note">{idx===0&&m?.transactions_change_pct!==null&&m?.transactions_change_pct!==undefined?<span className={m.transactions_change_pct>=0?"trend-positive":"trend-negative"}><TrendingUp size={11} style={{display:"inline",verticalAlign:"-2px",marginRight:4}}/>{note}</span>:note}</div></div>)}</div>
   <div className="dashboard-grid">

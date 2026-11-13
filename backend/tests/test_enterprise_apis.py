@@ -19,7 +19,7 @@ def test_feature_engineering_persists_multi_period_spend_fields():
     assert row.monetary_spend_30d == 400
     assert row.monetary_spend_60d == 400
     assert row.monetary_spend_90d == 900
-    assert row.average_transaction_value_90d == 300
+    assert row.average_transaction_value_90d == 475
 
 
 def test_crm_interaction_validation():

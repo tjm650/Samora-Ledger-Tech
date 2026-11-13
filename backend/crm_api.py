@@ -202,12 +202,13 @@ def create_task(payload: TaskCreate, x_api_key: str | None = Header(default=None
         raise HTTPException(500, "Unable to create CRM task") from exc
 
 @router.get("/crm/tasks")
-def list_tasks(status: Literal["open", "in_progress", "completed", "cancelled"] | None = None, assigned_to: UUID | None = None, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+def list_tasks(status: Literal["open", "in_progress", "completed", "cancelled"] | None = None, assigned_to: UUID | None = None, customer_id: UUID | None = None, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
     _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         q = _db().table("crm_tasks").select("*", count="exact")
         if status: q = q.eq("status", status)
         if assigned_to: q = q.eq("assigned_to", str(assigned_to))
+        if customer_id: q = q.eq("customer_id", str(customer_id))
         result = q.order("due_at").range((page-1)*page_size, page*page_size-1).execute()
         return {"tasks": result.data or [], "total": result.count or 0, "page": page, "page_size": page_size}
     except Exception as exc:
@@ -348,3 +349,24 @@ def update_risk_thresholds(threshold_id: UUID, payload: RiskThresholdUpdate, x_a
     except Exception as exc:
         log.exception("Risk threshold update failed")
         raise HTTPException(500, "Unable to update risk thresholds") from exc
+
+
+@router.get("/crm/tasks/{task_id}/history")
+def task_history(task_id: UUID, page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    try:
+        result = _db().table("crm_task_history").select("*", count="exact").eq("task_id", str(task_id)).order("created_at", desc=True).range((page-1)*page_size, page*page_size-1).execute()
+        return {"history": result.data or [], "total": result.count or 0, "page": page, "page_size": page_size}
+    except Exception as exc:
+        log.exception("CRM task history retrieval failed")
+        raise HTTPException(500, "Unable to retrieve task history") from exc
+
+@router.get("/crm/staff")
+def list_staff(x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+    _staff(x_api_key, authorization, {"admin", "relationship_manager"})
+    try:
+        rows = _db().table("staff_profiles").select("user_id,display_name,email,role").eq("is_active", True).order("display_name").execute().data or []
+        return {"staff": rows}
+    except Exception as exc:
+        log.exception("CRM staff directory retrieval failed")
+        raise HTTPException(500, "Unable to retrieve staff directory") from exc

@@ -51,7 +51,7 @@ export default function Navbar(){
    {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle header-mobile-menu" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   </header>
   {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}
-  <aside className={"workspace-sidebar"+(collapsed?" collapsed":"")+(mobileOpen?" mobile-open":"")} style={{width:collapsed?76:196}} aria-label="Main navigation">
+  <aside className={"workspace-sidebar"+(collapsed?" collapsed":"")+(mobileOpen?" mobile-open":"")} style={{width:collapsed?76:188}} aria-label="Main navigation">
    <div className="sidebar-topline">
     <span className="sidebar-section-label"></span>
     <button className="sidebar-toggle desktop-toggle" type="button" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?"Expand navigation":"Collapse navigation"} aria-expanded={!collapsed}>

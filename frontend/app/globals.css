@@ -620,3 +620,71 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
 .risk-driver-label strong{color:#0b1d34;font-variant-numeric:tabular-nums}
 .risk-driver-track{height:7px;overflow:hidden;border-radius:99px;background:#edf1f5}
 .risk-driver-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0b1d34,#f4b335)}
+
+
+/* Desktop sidebar: stay icon-only until the user hovers or tabs into it */
+@media (min-width:761px) {
+ .workspace-sidebar.collapsed {
+  width:76px!important;
+  min-width:76px!important;
+  max-width:76px!important;
+  overflow-x:hidden;
+  z-index:60;
+  transition:width .22s ease,box-shadow .22s ease;
+ }
+ .workspace-sidebar.collapsed:hover,
+ .workspace-sidebar.collapsed:focus-within {
+  width:188px!important;
+  min-width:188px!important;
+  max-width:188px!important;
+  padding-left:12px;
+  padding-right:2px;
+  overflow-x:visible;
+  box-shadow:8px 0 28px rgba(11,29,52,.14);
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-topline,
+ .workspace-sidebar.collapsed:focus-within .sidebar-topline {
+  justify-content:flex-start;
+  padding-left:11px;
+  padding-right:11px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-section-label,
+ .workspace-sidebar.collapsed:hover .sidebar-group-title,
+ .workspace-sidebar.collapsed:hover .sidebar-link span,
+ .workspace-sidebar.collapsed:hover .sidebar-user-copy,
+ .workspace-sidebar.collapsed:focus-within .sidebar-section-label,
+ .workspace-sidebar.collapsed:focus-within .sidebar-group-title,
+ .workspace-sidebar.collapsed:focus-within .sidebar-link span,
+ .workspace-sidebar.collapsed:focus-within .sidebar-user-copy {
+  display:initial;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-nav,
+ .workspace-sidebar.collapsed:focus-within .sidebar-nav {
+  gap:19px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-group,
+ .workspace-sidebar.collapsed:focus-within .sidebar-group {
+  align-items:stretch;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-link,
+ .workspace-sidebar.collapsed:focus-within .sidebar-link {
+  width:100%;
+  min-width:0;
+  justify-content:flex-start;
+  padding:0 11px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-active-mark,
+ .workspace-sidebar.collapsed:focus-within .sidebar-active-mark {
+  right:10px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-user,
+ .workspace-sidebar.collapsed:focus-within .sidebar-user {
+  justify-content:flex-start;
+  gap:10px;
+  padding:15px 8px 5px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-user-copy,
+ .workspace-sidebar.collapsed:focus-within .sidebar-user-copy {
+  display:flex;
+ }
+}

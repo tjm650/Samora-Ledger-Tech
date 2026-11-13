@@ -201,8 +201,8 @@ class AssistantQuestion(BaseModel):
 def business_intelligence_assistant(payload:AssistantQuestion,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
     _staff(x_api_key,authorization,True)
     import json, os, urllib.error, urllib.request
-    api_key=os.getenv("OPENAI_API_KEY")
-    if not api_key: raise HTTPException(503,"AI assistant is not configured. Add OPENAI_API_KEY to the Render service environment.")
+    api_key=os.getenv("GEMINI_API_KEY")
+    if not api_key: raise HTTPException(503,"AI assistant is not configured. Add GEMINI_API_KEY to the Render service environment.")
     db=get_database()
     customers=db.table("customers").select("customer_id",count="exact").execute()
     values=db.table("customer_value_scores").select("value_band,value_score").eq("assessment_date",date.today().isoformat()).execute().data or []
@@ -210,18 +210,23 @@ def business_intelligence_assistant(payload:AssistantQuestion,x_api_key:str|None
     recs=db.table("product_recommendations").select("recommendation_type,status,priority").in_("status",["suggested","presented","accepted","converted"]).execute().data or []
     insights=db.table("business_insights").select("title,summary,recommended_action").eq("is_active",True).limit(20).execute().data or []
     context={"customer_count":customers.count or 0,"value_band_counts":{b:sum(1 for v in values if v["value_band"]==b) for b in ["emerging","core","high_value","top_value"]},"rules_based_churn_risk":{"assessed":len(risks),"high":sum(1 for x in risks if float(x["churn_risk_score"])>=60),"top_drivers":dict(__import__("collections").Counter(x.get("primary_churn_driver") or "Unclassified" for x in risks).most_common(5))},"product_opportunities":{"total":len(recs),"cross_sell":sum(1 for x in recs if x["recommendation_type"]=="cross_sell"),"up_sell":sum(1 for x in recs if x["recommendation_type"]=="up_sell"),"high_priority":sum(1 for x in recs if x["priority"]=="high")},"latest_insights":insights}
-    model=os.getenv("OPENAI_MODEL","gpt-4o-mini")
-    body={"model":model,"temperature":0.2,"messages":[{"role":"system","content":"You are Samora Ledger Tech's banking business intelligence assistant. Answer only from the supplied aggregate portfolio context. Never invent metrics, customer facts, product terms, eligibility or profitability. Clearly distinguish observed facts from hypotheses. Churn scores are rules-based indicators, not validated probabilities. Customer value is relative, not bank profitability. Product recommendations require human suitability, consent and eligibility checks. If the context does not contain enough information, say so and identify the missing data. Give concise, actionable executive analysis."},{"role":"user","content":"Portfolio context (aggregate only): "+json.dumps(context)+"\n\nQuestion: "+payload.question}]}
-    request=urllib.request.Request("https://api.openai.com/v1/chat/completions",data=json.dumps(body).encode(),headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"},method="POST")
+    model=os.getenv("GEMINI_MODEL","gemini-2.5-flash")
+    system_instruction="You are Samora Ledger Tech's banking business intelligence assistant. Answer only from the supplied aggregate portfolio context. Never invent metrics, customer facts, product terms, eligibility or profitability. Clearly distinguish observed facts from hypotheses. Churn scores are rules-based indicators, not validated probabilities. Customer value is relative, not bank profitability. Product recommendations require human suitability, consent and eligibility checks. If the context does not contain enough information, say so and identify the missing data. Give concise, actionable executive analysis."
+    prompt="Portfolio context (aggregate only): "+json.dumps(context)+"\\n\\nQuestion: "+payload.question
+    body={"systemInstruction":{"parts":[{"text":system_instruction}]},"contents":[{"role":"user","parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.2,"maxOutputTokens":1200}}
+    url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent"
+    request=urllib.request.Request(url,data=json.dumps(body).encode(),headers={"x-goog-api-key":api_key,"Content-Type":"application/json"},method="POST")
     try:
         with urllib.request.urlopen(request,timeout=35) as response: result=json.loads(response.read().decode())
-        answer=result["choices"][0]["message"]["content"]
+        parts=result.get("candidates",[{}])[0].get("content",{}).get("parts",[])
+        answer="\\n".join(part.get("text","") for part in parts if part.get("text"))
+        if not answer: raise ValueError("Gemini returned no text content")
     except urllib.error.HTTPError as exc:
         detail=exc.read().decode(errors="ignore")[:500]
-        raise HTTPException(502,"AI provider request failed: "+detail) from exc
+        raise HTTPException(502,"Gemini API request failed: "+detail) from exc
     except Exception as exc:
-        raise HTTPException(502,"Unable to generate an AI business insight") from exc
-    return {"answer":answer,"model":model,"context_scope":"aggregate portfolio data only","generated_at":datetime.now(timezone.utc).isoformat()}
+        raise HTTPException(502,"Unable to generate an AI business insight with Gemini") from exc
+    return {"answer":answer,"model":model,"provider":"Google Gemini","context_scope":"aggregate portfolio data only","generated_at":datetime.now(timezone.utc).isoformat()}
 
 @router.get("/products")
 def list_products(x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):

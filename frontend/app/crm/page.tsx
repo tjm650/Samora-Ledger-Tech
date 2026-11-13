@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import HeaderActions from "@/app/components/header-actions";
 import {useEffect,useMemo,useState} from "react";
 import {Search,Users,RefreshCw,ArrowUpRight} from "lucide-react";
 type Customer={customer_id:string;full_name:string;email?:string;account_tier?:string;created_at?:string;predictive_insights?:{churn_risk_score:number;primary_churn_driver:string;recommended_product:string;prescriptive_action:string;evaluated_at?:string}[]};
@@ -10,7 +11,7 @@ export default function CRM(){
  useEffect(()=>{void load()},[]);
  const filtered=useMemo(()=>customers.filter(c=>{const insight=c.predictive_insights?.[0];const score=insight?.churn_risk_score??-1;const q=search.toLowerCase();return (!q||[c.full_name,c.email,c.account_tier,c.customer_id].some(v=>String(v||"").toLowerCase().includes(q)))&&(risk==="all"||(risk==="unscored"?score<0:riskBand(score)===risk))}),[customers,search,risk]);
  const high=customers.filter(c=>(c.predictive_insights?.[0]?.churn_risk_score??0)>=60).length;
- return <><div className="page-heading page-heading-actions"><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/>Refresh</button></div></div>
+ return <><HeaderActions><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/>Refresh</button></div></HeaderActions>
  {error&&<div className="alert" role="alert">{error}</div>}
  <div className="kpi-grid kpi-three"><div className="kpi-card"><div className="kpi-label"><Users size={14} style={{display:"inline",marginRight:7}}/>Customer records</div><div className="kpi-value">{loading?"—":customers.length.toLocaleString()}</div><div className="kpi-note">Available customer profiles</div></div><div className="kpi-card"><div className="kpi-label">High-risk relationships</div><div className="kpi-value">{loading?"—":high.toLocaleString()}</div><div className="kpi-note">Risk score of 60 or above</div></div><div className="kpi-card"><div className="kpi-label">Profiles displayed</div><div className="kpi-value">{loading?"—":filtered.length.toLocaleString()}</div><div className="kpi-note">After current search and filters</div></div></div>
  <section className="panel"><div className="panel-heading" style={{marginBottom:18}}><div><h2 className="panel-title">Customer directory</h2><p className="panel-caption">Search customer records and open a relationship profile</p></div></div><div className="table-toolbar"><label className="search-field"><Search size={15}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email, tier or customer ID"/></label><select className="filter-select" value={risk} onChange={e=>setRisk(e.target.value)} aria-label="Filter by risk"><option value="all">All risk levels</option><option value="high">High risk</option><option value="medium">Moderate risk</option><option value="low">Low risk</option><option value="unscored">Not scored</option></select></div>

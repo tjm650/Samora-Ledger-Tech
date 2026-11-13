@@ -97,7 +97,7 @@ def crm_customers(
     x_api_key: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ):
-    _staff(x_api_key, authorization)
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     if created_from and created_to and created_from > created_to:
         raise HTTPException(422, "created_from must not be after created_to")
     try:
@@ -120,7 +120,7 @@ def crm_customer_profile(
     x_api_key: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ):
-    _staff(x_api_key, authorization)
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         db = _db()
         customer = db.table("customers").select("customer_id,full_name,email,account_tier,created_at").eq("customer_id", str(customer_id)).maybe_single().execute().data
@@ -135,14 +135,14 @@ def crm_customer_profile(
         for days in (30, 60, 90):
             cut = now - timedelta(days=days)
             spend[str(days)] = round(sum(float(t["amount"]) for t in tx if t["transaction_type"] == "Debit" and datetime.fromisoformat(t["timestamp"].replace("Z", "+00:00")) >= cut), 2)
-        debit_values = [float(t["amount"]) for t in tx if t["transaction_type"] == "Debit"]
+        transaction_values = [float(t["amount"]) for t in tx]
         latest_balance = float(tx[0]["post_transaction_balance"]) if tx else None
         profile = {
             "customer": customer, "features": features, "insight": insight,
             "spending": {"30d": spend["30"], "60d": spend["60"], "90d": spend["90"]},
             "transaction_metrics": {
                 "transaction_count_90d": len(tx),
-                "average_transaction_value_90d": round(sum(debit_values) / len(debit_values), 2) if debit_values else 0,
+                "average_transaction_value_90d": round(sum(transaction_values) / len(transaction_values), 2) if transaction_values else 0,
                 "latest_recorded_balance": latest_balance,
                 "transaction_recency_days": features.get("recency_days") if features else None,
             },
@@ -162,6 +162,7 @@ def create_interaction(customer_id: UUID, payload: InteractionCreate, x_api_key:
     try:
         db = _db()
         row = {"customer_id": str(customer_id), "staff_user_id": actor["user_id"], **payload.model_dump(exclude_none=True)}
+        if row.get("occurred_at"): row["occurred_at"] = row["occurred_at"].isoformat()
         result = db.table("crm_interactions").insert(row).execute().data
         if not result: raise HTTPException(500, "Interaction was not saved")
         return result[0]
@@ -172,7 +173,7 @@ def create_interaction(customer_id: UUID, payload: InteractionCreate, x_api_key:
 
 @router.get("/crm/customers/{customer_id}/interactions")
 def list_interactions(customer_id: UUID, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization)
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         result = _db().table("crm_interactions").select("*", count="exact").eq("customer_id", str(customer_id)).order("occurred_at", desc=True).range((page-1)*page_size, page*page_size-1).execute()
         return {"interactions": result.data or [], "total": result.count or 0, "page": page, "page_size": page_size}
@@ -202,7 +203,7 @@ def create_task(payload: TaskCreate, x_api_key: str | None = Header(default=None
 
 @router.get("/crm/tasks")
 def list_tasks(status: Literal["open", "in_progress", "completed", "cancelled"] | None = None, assigned_to: UUID | None = None, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization)
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         q = _db().table("crm_tasks").select("*", count="exact")
         if status: q = q.eq("status", status)
@@ -215,7 +216,7 @@ def list_tasks(status: Literal["open", "in_progress", "completed", "cancelled"] 
 
 @router.get("/crm/customers/{customer_id}/tasks")
 def customer_tasks(customer_id: UUID, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization)
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         result = _db().table("crm_tasks").select("*", count="exact").eq("customer_id", str(customer_id)).order("created_at", desc=True).range((page-1)*page_size, page*page_size-1).execute()
         return {"tasks": result.data or [], "total": result.count or 0, "page": page, "page_size": page_size}

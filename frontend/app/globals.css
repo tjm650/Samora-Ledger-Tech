@@ -3379,7 +3379,7 @@ body:has(.workspace-sidebar.collapsed) .site-footer {
     max-width: 76px !important;
     overflow-x: hidden;
     z-index: 60;
-    transition: width .22s ease, box-shadow .22s ease;
+    transition: width .32s cubic-bezier(.22, 1, .36, 1), min-width .32s cubic-bezier(.22, 1, .36, 1), max-width .32s cubic-bezier(.22, 1, .36, 1), padding .32s ease, box-shadow .32s ease;
   }
 
   .workspace-sidebar.collapsed:hover,

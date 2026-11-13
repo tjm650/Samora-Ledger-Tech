@@ -367,7 +367,7 @@ def task_history(task_id: UUID, page: int = Query(1, ge=1), page_size: int = Que
 
 @router.get("/crm/staff")
 def list_staff(x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, {"admin", "relationship_manager"})
+    _staff(x_api_key, authorization, {"admin", "analyst", "relationship_manager"})
     try:
         rows = _db().table("staff_profiles").select("user_id,display_name,email,role").eq("is_active", True).order("display_name").execute().data or []
         return {"staff": rows}

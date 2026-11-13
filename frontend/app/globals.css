@@ -492,3 +492,31 @@ body{background:#f4f6f8;color:#1a1a1a}
  .header-page-title{font-size:16px}
  .workspace-header-left{gap:7px}
 }
+
+
+/* Join the Executive Overview action strip seamlessly to the global header */
+@media(min-width:761px){
+ body:has(.page-heading-actions) .main-shell{padding-top:0}
+ .main-shell>.page-heading-actions{
+  position:relative;
+  width:calc(100% + var(--sidebar-width,150px));
+  margin:0 0 24px calc(-1 * var(--sidebar-width,150px));
+  padding:0 clamp(24px,4vw,62px) 18px max(30px,calc(var(--sidebar-width,150px) + 30px));
+  min-height:58px;
+  display:flex;align-items:center;justify-content:flex-end;
+  background:#0b1d34;color:#fff;
+  border:0;border-radius:0;box-shadow:none;
+ }
+ body:has(.workspace-sidebar.collapsed) .main-shell>.page-heading-actions{
+  width:calc(100% + 76px);margin-left:-76px;
+  padding-left:106px;
+ }
+}
+@media(max-width:760px){
+ body:has(.page-heading-actions) .main-shell{padding-top:0}
+ .main-shell>.page-heading-actions{
+  width:100%;margin:0 0 22px;padding:0 4% 16px;
+  min-height:54px;display:flex;align-items:center;justify-content:flex-end;
+  background:#0b1d34;color:#fff;border:0;border-radius:0;box-shadow:none;
+ }
+}

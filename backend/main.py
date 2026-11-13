@@ -14,7 +14,7 @@ app=FastAPI(title="Samora Ledger Tech API",version="1.1.0")
 _OVERVIEW_CACHE:dict[int,tuple[float,dict]]={}
 _OVERVIEW_CACHE_TTL_SECONDS=30
 origins=[x.strip() for x in os.getenv("API_CORS_ORIGINS","http://localhost:3000").split(",") if x.strip()]
-app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=True,allow_methods=["GET","POST"],allow_headers=["Authorization","Content-Type","X-API-Key"])
+app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=True,allow_methods=["GET","POST","PATCH"],allow_headers=["Authorization","Content-Type","X-API-Key"])
 
 def authorize(x_api_key: str|None):
     expected=os.getenv("API_KEY")
@@ -228,3 +228,8 @@ def explain(customer_id:str,x_api_key:str|None=Header(default=None),authorizatio
 
 from crm_api import router as crm_router
 app.include_router(crm_router)
+
+from management_api import router as management_router
+from settings_api import router as settings_router
+app.include_router(management_router)
+app.include_router(settings_router)

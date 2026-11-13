@@ -27,12 +27,26 @@ def _staff(x_api_key, authorization, write=False):
 def growth_overview(x_api_key:str|None=Header(default=None), authorization:str|None=Header(default=None)):
     _staff(x_api_key,authorization)
     db=get_database()
-    customers=db.table("customers").select("customer_id").execute().data or []
+    customer_result=db.table("customers").select("customer_id",count="exact").execute()
+    customer_total=customer_result.count or len(customer_result.data or [])
     today=date.today().isoformat()
-    values=db.table("customer_value_scores").select("value_band,value_score").eq("assessment_date",today).execute().data or []
-    recs=db.table("product_recommendations").select("recommendation_id,recommendation_type,status,priority").in_("status",["suggested","presented","accepted","converted"]).execute().data or []
+    values=[]; offset=0
+    while True:
+        page=(db.table("customer_value_scores").select("value_band,value_score").eq("assessment_date",today)
+              .order("value_score_id").range(offset,offset+999).execute().data or [])
+        values.extend(page)
+        if len(page)<1000: break
+        offset+=1000
+    recs=[]; offset=0
+    while True:
+        page=(db.table("product_recommendations").select("recommendation_id,recommendation_type,status,priority")
+              .in_("status",["suggested","presented","accepted","converted"]).order("recommendation_id")
+              .range(offset,offset+999).execute().data or [])
+        recs.extend(page)
+        if len(page)<1000: break
+        offset+=1000
     insights=db.table("business_insights").select("*").eq("is_active",True).order("generated_at",desc=True).limit(12).execute().data or []
-    return {"customers_total":len(customers),"customers_scored":len(values),
+    return {"customers_total":customer_total,"customers_scored":len(values),
       "value_distribution":{band:sum(1 for v in values if v["value_band"]==band) for band in ["emerging","core","high_value","top_value"]},
       "recommendations_total":len(recs),"cross_sell_count":sum(1 for r in recs if r["recommendation_type"]=="cross_sell"),
       "up_sell_count":sum(1 for r in recs if r["recommendation_type"]=="up_sell"),

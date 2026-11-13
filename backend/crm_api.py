@@ -128,6 +128,9 @@ def crm_customer_profile(
             raise HTTPException(404, "Customer not found")
         features = db.table("customer_features").select("*").eq("customer_id", str(customer_id)).maybe_single().execute().data
         insight = db.table("predictive_insights").select("*").eq("customer_id", str(customer_id)).maybe_single().execute().data
+        provenance_rows = (db.table("risk_score_history").select("rules_engine_version,configuration_version,model_run_id,assessed_at")
+                           .eq("customer_id",str(customer_id)).order("assessed_at",desc=True).limit(1).execute().data or [])
+        provenance = provenance_rows[0] if provenance_rows else None
         since = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
         tx = db.table("transactions").select("timestamp,amount,transaction_type,post_transaction_balance").eq("customer_id", str(customer_id)).gte("timestamp", since).order("timestamp", desc=True).limit(5000).execute().data or []
         now = datetime.now(timezone.utc)
@@ -146,7 +149,8 @@ def crm_customer_profile(
                 "latest_recorded_balance": latest_balance,
                 "transaction_recency_days": features.get("recency_days") if features else None,
             },
-            "assessment_timestamp": insight.get("evaluated_at") if insight else None,
+            "assessment_timestamp": (provenance.get("assessed_at") if provenance else (insight.get("evaluated_at") if insight else None)),
+            "assessment_provenance": provenance,
             "explanation_type": "transparent rules-based churn assessment; not credit risk or SHAP",
         }
         return profile

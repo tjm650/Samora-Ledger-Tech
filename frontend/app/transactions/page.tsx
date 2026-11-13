@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
+import HeaderActions from "@/app/components/header-actions";
 import {ArrowLeftRight,Download,Filter,RefreshCw} from "lucide-react";
 import {amount,dateTime,number,type ExecutiveTransaction} from "@/lib/executive";
 type Result={transactions:ExecutiveTransaction[];total:number;limit:number;offset:number};
@@ -12,7 +13,7 @@ export default function TransactionsPage(){
  function exportCsv(){const fields=["reference","timestamp","transaction_type","merchant_category","channel","amount","post_transaction_balance"];const lines=[fields.join(","),...rows.map(row=>fields.map(field=>JSON.stringify((row as unknown as Record<string,unknown>)[field]??"")).join(","))].join("\n");const url=URL.createObjectURL(new Blob([lines],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="samora-executive-transaction-activity.csv";a.click();URL.revokeObjectURL(url)}
  const debit=rows.filter(x=>x.transaction_type==="Debit").reduce((s,x)=>s+x.amount,0);const credit=rows.filter(x=>x.transaction_type==="Credit").reduce((s,x)=>s+x.amount,0);
  return <>
-  <div className="page-heading page-heading-actions"><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/>Refresh</button><button className="btn" onClick={exportCsv} disabled={!rows.length}><Download size={14}/>Export current page</button></div></div>
+  <HeaderActions><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/>Refresh</button><button className="btn" onClick={exportCsv} disabled={!rows.length}><Download size={14}/>Export current page</button></div></HeaderActions>
   {error&&<div className="alert" role="alert">{error}</div>}
   <div className="kpi-grid kpi-three"><div className="kpi-card"><div className="kpi-label">Matching transactions</div><div className="kpi-value">{loading?"—":number(total)}</div><div className="kpi-note">Based on selected filters</div></div><div className="kpi-card"><div className="kpi-label">Debits on this page</div><div className="kpi-value">{loading?"—":amount(debit)}</div><div className="kpi-note">Source transaction currency</div></div><div className="kpi-card"><div className="kpi-label">Credits on this page</div><div className="kpi-value">{loading?"—":amount(credit)}</div><div className="kpi-note">Source transaction currency</div></div></div>
   <section className="panel"><div className="panel-heading"><div><h2 className="panel-title">Ledger activity</h2><p className="panel-caption">Latest transactions · {number(total)} matching records</p></div><span className="panel-period"><ArrowLeftRight size={11} style={{display:"inline",verticalAlign:"-2px",marginRight:5}}/>LIVE QUERY</span></div>

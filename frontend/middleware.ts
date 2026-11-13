@@ -15,6 +15,9 @@ export async function middleware(request:NextRequest){
   return NextResponse.redirect(target);
  }
  if(!pathname.startsWith("/api/"))return NextResponse.next();
+ // Public demo mode applies only to GET requests. Route handlers and the backend
+ // independently enforce staff authorization for writes and privileged reads.
+ if(process.env.SAMORA_DEMO_PUBLIC_READS==="true"&&request.method==="GET")return NextResponse.next();
  return updateSession(request);
 }
 

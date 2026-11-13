@@ -102,10 +102,12 @@ def run_pipeline():
     features=[]; insights=[]
     for row in frame.itertuples(index=False):
         data=row._asdict(); score=score_customer(row)
-        features.append({k:data[k] for k in ("customer_id","recency_days","frequency_30d","monetary_spend_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")})
+        features.append({k:data[k] for k in ("customer_id","recency_days","frequency_30d","monetary_spend_30d","monetary_spend_60d","monetary_spend_90d","average_transaction_value_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")})
         insights.append({"customer_id":data["customer_id"],**score})
+    legacy_feature_fields=("customer_id","recency_days","frequency_30d","monetary_spend_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")
     for batch in range(0,len(features),250):
-        db.table("customer_features").upsert(features[batch:batch+250],on_conflict="customer_id").execute()
+        legacy_rows=[{key:row[key] for key in legacy_feature_fields} for row in features[batch:batch+250]]
+        db.table("customer_features").upsert(legacy_rows,on_conflict="customer_id").execute()
         db.table("predictive_insights").upsert(insights[batch:batch+250],on_conflict="customer_id").execute()
 
     # Append immutable feature and risk snapshots for audit and historical monitoring.

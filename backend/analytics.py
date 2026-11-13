@@ -124,10 +124,10 @@ def run_pipeline():
              .eq("version","rules-v1").maybe_single().execute().data or {})
     run_row={
         "model_version_id":version.get("model_version_id"),
-        "status":"completed","customers_evaluated":len(features),"configuration_version":configuration_version,
+        "status":"running","customers_evaluated":len(features),"configuration_version":configuration_version,
         "records_skipped":max(0,len(customer_ids)-len(features)),"records_failed":0,
         "execution_duration_ms":int((time.monotonic()-started_clock)*1000),
-        "started_at":started_at.isoformat(),"completed_at":evaluated_at.isoformat(),
+        "started_at":started_at.isoformat(),"completed_at":None,
         "metrics":None
     }
     run_result=db.table("model_runs").insert(run_row).execute().data
@@ -183,10 +183,15 @@ def run_pipeline():
         alerts.append({**item,"risk_history_id":history_id_by_customer.get(item["customer_id"])})
     for batch in range(0,len(alerts),250):
         db.table("risk_alerts").insert(alerts[batch:batch+250]).execute()
+    execution_duration_ms=int((time.monotonic()-started_clock)*1000)
+    db.table("model_runs").update({
+        "status":"completed","completed_at":datetime.now(timezone.utc).isoformat(),
+        "execution_duration_ms":execution_duration_ms
+    }).eq("model_run_id",model_run_id).execute()
     return {"customers_processed":len(features),"insights_written":len(insights),
             "feature_snapshots_written":len(history_features),"risk_snapshots_written":len(risk_history),
             "risk_alerts_created":len(alerts),"rules_engine_version":"rules-v1",
-            "model_run_id":model_run_id,"execution_duration_ms":run_row["execution_duration_ms"]}
+            "model_run_id":model_run_id,"execution_duration_ms":execution_duration_ms}
 
 
 def explain_customer(customer_id):

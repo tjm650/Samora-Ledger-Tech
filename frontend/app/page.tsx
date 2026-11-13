@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {Activity,ArrowDownLeft,ArrowUpRight,RefreshCw,ShieldAlert,TrendingUp} from "lucide-react";
+import {Activity,ArrowDownLeft,ArrowUpRight,ShieldAlert,TrendingUp} from "lucide-react";
 import {Bar,BarChart,CartesianGrid,Cell,Line,LineChart,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 import {amount,getExecutiveOverview,number,type ExecutiveOverview} from "@/lib/executive";
 const riskColors=["#21836f","#d7a34b","#bd6259"];

@@ -42,7 +42,7 @@ export default function Navbar(){
    <div className="workspace-header-left">
     <Link href="/" className="workspace-brand" aria-label="Samora Ledger Tech home">
      <span className="brand-mark"><Building2 size={19}/></span>
-     <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span></span>
+     <span className="workspace-brand-copy"><span className="brand-name">LEDGER SYSTEM</span></span>
     </Link>
     <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
    </div>

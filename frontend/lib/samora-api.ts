@@ -2,7 +2,7 @@ import {NextResponse} from "next/server";
 import {requireExecutiveAccess} from "@/lib/auth";
 
 export async function samoraRequest(path:string,init:RequestInit={}){
- const access=await requireExecutiveAccess();
+ const access=await requireExecutiveAccess(init.method||"GET");
  if(access.response)return access.response;
  const base=process.env.SAMORA_API_URL;const key=process.env.SAMORA_API_KEY;
  if(!base||!key)return NextResponse.json({error:"The Samora API connection is not configured on the server."},{status:503});

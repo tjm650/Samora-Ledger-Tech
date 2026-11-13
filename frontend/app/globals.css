@@ -520,3 +520,23 @@ body{background:#f4f6f8;color:#1a1a1a}
   background:#0b1d34;color:#fff;border:0;border-radius:0;box-shadow:none;
  }
 }
+
+
+/* Unified executive overview header: identity and actions are one continuous header */
+.workspace-header{flex-wrap:nowrap}
+.header-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-left:auto;flex:0 0 auto}
+.header-actions .btn{min-height:42px}
+.header-actions .btn-secondary{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.25);color:#fff}
+.header-actions .btn-secondary:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.38);color:#fff}
+@media(max-width:760px){
+ .workspace-header{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:12px;padding:13px 15px 16px;background:#0b1d34!important}
+ .workspace-header-left{flex:1 1 calc(100% - 56px);width:auto}
+ .header-actions{order:3;flex:1 0 100%;width:100%;margin:0;justify-content:flex-start;padding-left:0}
+ .header-actions .btn{flex:1 1 auto;min-height:40px}
+ .header-mobile-menu{order:2;align-self:flex-start}
+}
+@media(max-width:420px){
+ .workspace-header{padding:12px 12px 14px}
+ .header-actions{gap:8px}
+ .header-actions .btn{padding:10px 11px;font-size:11px}
+}

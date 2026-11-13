@@ -253,11 +253,15 @@ def risk_summary(x_api_key: str | None = Header(default=None), authorization: st
     try:
         db = _db()
         rows = db.table("predictive_insights").select("churn_risk_score,primary_churn_driver,evaluated_at").range(0,9999).execute().data or []
+        threshold_rows = db.table("risk_thresholds").select("low_max,moderate_max").eq("name","default").limit(1).execute().data or []
+        threshold = threshold_rows[0] if threshold_rows else {"low_max":29.99,"moderate_max":59.99}
+        low_max, moderate_max = float(threshold["low_max"]), float(threshold["moderate_max"])
         scores = [float(r["churn_risk_score"]) for r in rows]
         return {"assessment_type": "rules_based_churn_risk_not_credit_risk", "customers_assessed": len(scores),
                 "average_score": round(sum(scores)/len(scores), 2) if scores else 0,
-                "low": sum(s < 30 for s in scores), "moderate": sum(30 <= s < 60 for s in scores),
-                "high": sum(s >= 60 for s in scores), "generated_at": datetime.now(timezone.utc).isoformat()}
+                "low": sum(s <= low_max for s in scores), "moderate": sum(low_max < s <= moderate_max for s in scores),
+                "high": sum(s > moderate_max for s in scores), "thresholds":{"low_max":low_max,"moderate_max":moderate_max},
+                "generated_at": datetime.now(timezone.utc).isoformat()}
     except Exception as exc:
         log.exception("Risk summary retrieval failed")
         raise HTTPException(500, "Unable to retrieve risk summary") from exc

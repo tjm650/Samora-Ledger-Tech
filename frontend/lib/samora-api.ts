@@ -11,7 +11,7 @@ export async function samoraRequest(path:string,init:RequestInit={}){
   headers.set("X-API-Key",key);
   if(access.accessToken)headers.set("Authorization",`Bearer ${access.accessToken}`);
   if(init.body&&!headers.has("Content-Type"))headers.set("Content-Type","application/json");
-  const upstream=await fetch(`${base.replace(/\\/$/,"")}${path}`,{...init,headers,cache:"no-store"});
+  const upstream=await fetch(`${(base.endsWith("/")?base.slice(0,-1):base)}${path}`,{...init,headers,cache:"no-store"});
   const text=await upstream.text();
   let body:unknown={};
   try{body=text?JSON.parse(text):{}}catch{body={error:"The analytics service returned an invalid response."}}

@@ -32,7 +32,6 @@ def generate_report(payload: ReportRequest, x_api_key: str | None = Header(defau
     if payload.period_end < payload.period_start:
         raise HTTPException(422, "period_end must not be before period_start")
     try:
-        from main import build_executive_overview, fetch_all_insights
         db = _db()
         start = datetime.combine(payload.period_start, datetime.min.time(), tzinfo=timezone.utc)
         end = datetime.combine(payload.period_end + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
@@ -45,21 +44,25 @@ def generate_report(payload: ReportRequest, x_api_key: str | None = Header(defau
             rows.extend(page)
             if len(page)<size: break
             offset+=size
-        insights=fetch_all_insights(db)
-        overview=build_executive_overview(rows,insights,end-timedelta(microseconds=1),max(1,(payload.period_end-payload.period_start).days+1))
+        overview=db.rpc("analytics_period_summary",{
+            "p_start":start.isoformat(),"p_end":end.isoformat(),
+            "p_interval":"day","p_dimension":"none"
+        }).execute().data
+        if isinstance(overview,list) and overview: overview=overview[0]
+        if not isinstance(overview,dict): raise HTTPException(500,"Analytics report aggregation returned an invalid result")
         if payload.report_key=="transaction_performance":
             content={"metrics":overview["metrics"],"transaction_trend":overview["transaction_trend"],"category_breakdown":overview["category_breakdown"],"channel_breakdown":overview["channel_breakdown"]}
         elif payload.report_key=="churn_risk":
-            content={"risk_distribution":overview["risk_distribution"],"risk_drivers":overview["risk_drivers"],"metrics":{k:v for k,v in overview["metrics"].items() if "risk" in k or "relationship" in k}}
+            content={"risk_metrics":overview["risk_metrics"],"metrics":overview["metrics"]}
         elif payload.report_key=="customer_segmentation":
             customers=db.table("customers").select("account_tier").range(0,9999).execute().data or []
             features=db.table("customer_features").select("behavior_segment").range(0,9999).execute().data or []
             from collections import Counter
             content={"account_tier_distribution":dict(Counter(x["account_tier"] for x in customers)),"behavioral_segments":dict(Counter(x.get("behavior_segment") or "unclassified" for x in features))}
         elif payload.report_key=="risk_drivers":
-            content={"risk_drivers":overview["risk_drivers"],"risk_distribution":overview["risk_distribution"]}
+            content={"risk_metrics":overview["risk_metrics"]}
         else:
-            content={"metrics":overview["metrics"],"risk_distribution":overview["risk_distribution"],"risk_drivers":overview["risk_drivers"],"transaction_trend":overview["transaction_trend"]}
+            content={"metrics":overview["metrics"],"risk_metrics":overview["risk_metrics"],"transaction_trend":overview["transaction_trend"]}
         definitions=db.table("report_definitions").select("report_definition_id").eq("report_key",payload.report_key).maybe_single().execute().data or {}
         run={
             "report_definition_id":definitions.get("report_definition_id"),"report_key":payload.report_key,

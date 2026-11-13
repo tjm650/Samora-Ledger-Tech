@@ -1,11 +1,11 @@
 "use client";
 
 import {FormEvent,useState} from "react";
-import {useRouter,useSearchParams} from "next/navigation";
+import {useRouter} from "next/navigation";
 import {createClient} from "@/lib/supabase/client";
 
 export default function LoginPage(){
- const router=useRouter();const search=useSearchParams();
+ const router=useRouter();
  const [email,setEmail]=useState("");const [password,setPassword]=useState("");
  const [error,setError]=useState("");const [loading,setLoading]=useState(false);
  async function submit(event:FormEvent<HTMLFormElement>){
@@ -18,7 +18,7 @@ export default function LoginPage(){
    if(!["admin","analyst","relationship_manager","executive"].includes(role)){
     await supabase.auth.signOut();throw new Error("This account has not been authorised for Samora Ledger Tech. Contact your administrator.");
    }
-   const next=search.get("next");
+   const next=new URLSearchParams(window.location.search).get("next");
    router.replace(next&&next.startsWith("/")&&!next.startsWith("//")?next:"/");
    router.refresh();
   }catch(e){setError(e instanceof Error?e.message:"Sign-in failed.");}

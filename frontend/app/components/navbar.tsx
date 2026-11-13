@@ -5,7 +5,7 @@ import {usePathname} from "next/navigation";
 import {useEffect,useState} from "react";
 import {
  Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,
- PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings,UserRound,ChevronDown,RefreshCw,Activity
+ PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings,RefreshCw,Activity
 } from "lucide-react";
 
 const groups=[
@@ -65,11 +65,9 @@ export default function Navbar(){
      {group.items.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={collapsed?item.label:undefined} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
     </section>)}
    </nav>
-   <div className="sidebar-user" aria-label="Signed-in user">
-    <span className="sidebar-user-avatar"><UserRound size={17}/></span>
-    <span className="sidebar-user-copy"><small>Signed in as</small><strong>Executive user</strong></span>
-    <span className="sidebar-user-status" aria-label="Signed-in session active"/>
-    <ChevronDown className="sidebar-user-chevron" size={15}/>
+   <div className="sidebar-user" aria-label="Workspace information">
+    <span className="sidebar-user-avatar"><Building2 size={17}/></span>
+    <span className="sidebar-user-copy"><small>Workspace</small><strong>Demo environment</strong></span>
    </div>
   </aside>
  </>;

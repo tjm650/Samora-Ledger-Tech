@@ -3,7 +3,7 @@ import Link from "next/link";
 import HeaderActions from "@/app/components/header-actions";
 import {useEffect,useState,type FormEvent} from "react";
 import {ArrowLeft,UserRound,ShieldAlert,Activity,RefreshCw,Phone,ClipboardList,CheckCircle2} from "lucide-react";
-type Profile={customer:any;features:any;insight:any;spending?:{30d:number;60d:number;90d:number};transaction_metrics?:{transaction_count_90d:number;average_transaction_value_90d:number;latest_recorded_balance:number|null};assessment_timestamp?:string;explanation_type?:string};
+type Profile={customer:any;features:any;insight:any;spending?:{"30d":number;"60d":number;"90d":number};transaction_metrics?:{transaction_count_90d:number;average_transaction_value_90d:number;latest_recorded_balance:number|null};assessment_timestamp?:string;explanation_type?:string};
 type Interaction={interaction_id:string;interaction_type:string;subject:string;notes?:string;outcome?:string;occurred_at:string};
 type Task={task_id:string;title:string;description?:string;priority:string;status:string;due_at?:string;outcome?:string};
 function fmt(v:any){return v===null||v===undefined?"—":typeof v==="number"?v.toLocaleString(undefined,{maximumFractionDigits:2}):String(v)}

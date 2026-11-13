@@ -4,7 +4,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {useState} from "react";
 import {
- Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,
+ LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,
  Menu,X,HelpCircle,Settings,RefreshCw,Activity
 } from "lucide-react";
 
@@ -40,7 +40,7 @@ export default function Navbar(){
   <header className="workspace-header">
    <div className="workspace-header-left">
     <Link href="/" className="workspace-brand" aria-label="Samora Ledger Tech home">
-     <span className="brand-mark"><Building2 size={19}/></span>
+     <span className="brand-mark" aria-hidden="true">S</span>
      <span className="workspace-brand-copy"><span className="brand-name"> SAMORA LEDGER TECH</span></span>
     </Link>
     <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
@@ -62,7 +62,7 @@ export default function Navbar(){
     </section>)}
    </nav>
    <div className="sidebar-user" aria-label="Workspace information">
-    <span className="sidebar-user-avatar"><Building2 size={17}/></span>
+    <span className="sidebar-user-avatar" aria-hidden="true">S</span>
     <span className="sidebar-user-copy"><small>Workspace</small><strong>Demo environment</strong></span>
    </div>
   </aside>

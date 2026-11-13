@@ -12,12 +12,12 @@ Enterprise Banking Transaction Analytics & Executive Decision-Support MVP.
 The original populated tables remain intact: `customers`, `transactions`, `customer_features` and `predictive_insights`. Enterprise functionality is added through non-destructive migrations; no existing customer or transaction rows are recreated.
 
 Migrations currently include:
-- `20261113130000_enterprise_crm_risk_reporting_governance.sql`
-- `20261113140000_harden_enterprise_rls_and_indexes.sql`
-- `20261113150000_use_configured_risk_thresholds.sql`
-- `20261113160000_version_scoring_configuration_references.sql`
-- `20261113170000_crm_search_indexes_and_updated_at.sql`
-- `20261113180000_relocate_trigram_extension_and_deduplicate_index.sql`
+- `20261113122811_enterprise_crm_risk_reporting_governance.sql`
+- `20261113122834_harden_enterprise_rls_and_indexes.sql`
+- `20261113123159_use_configured_risk_thresholds.sql`
+- `20261113123306_version_scoring_configuration_references.sql`
+- `20261113123449_crm_search_indexes_and_updated_at.sql`
+- `20261113123509_relocate_trigram_extension_and_deduplicate_index.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 

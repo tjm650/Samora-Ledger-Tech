@@ -1,101 +1,76 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import {usePathname} from "next/navigation";
+import {useEffect,useState} from "react";
+import {
+ Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,
+ PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings,UserRound,ChevronDown,RefreshCw,Activity
+} from "lucide-react";
 
-const links = [
-  { href: "/", label: "Executive Overview" },
-  { href: "/crm", label: "Customer CRM" },
+const groups=[
+ {label:"Overview",items:[
+  {href:"/",label:"Overview",icon:LayoutDashboard}
+ ]},
+ {label:"",items:[
+  {href:"/crm",label:"crm",icon:Users}
+ ]},
+ {label:"Transaction Management",items:[
+  {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight}
+ ]},
+ {label:"Risk & Controls",items:[
+  {href:"/risk",label:"Risks",icon:ShieldAlert},
+  {href:"/governance",label:"Model governance",icon:Scale}
+ ]},
+ {label:"Insights & Reporting",items:[
+  {href:"/analytics",label:"Analytics",icon:BarChart3},
+  {href:"/reports",label:"Management reports",icon:FileText}
+ ]},
+ {label:"",items:[
+  {href:"/help",label:"Help",icon:HelpCircle},
+  {href:"/settings",label:"Settings",icon:Settings}
+ ]}
 ];
 
-export default function Navbar() {
-  const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+export default function Navbar(){
+ const pathname=usePathname();
+ const [collapsed,setCollapsed]=useState(false);
+ const [mobileOpen,setMobileOpen]=useState(false);
 
-  return (
-    <header
-      style={{
-        position: "relative",
-        zIndex: 20,
-        width: "100%",
-        background: "#14213d",
-        color: "#ffffff",
-        borderBottom: "3px solid #0f766e",
-        boxShadow: "0 3px 14px rgba(15, 23, 42, 0.14)",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1440,
-          minHeight: 76,
-          margin: "0 auto",
-          padding: "14px 5%",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 24,
-          flexWrap: "wrap",
-        }}
-      >
-        <Link
-          href="/"
-          aria-label="Samora Ledger Tech home"
-          onClick={() => setMenuOpen(false)}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 11,
-            color: "#ffffff",
-            fontWeight: 800,
-            letterSpacing: 1.1,
-            fontSize: 16,
-            whiteSpace: "nowrap",
-          }}
-        >
-          <span aria-hidden="true" style={{ color: "#5eead4", fontSize: 25 }}>◈</span>
-          <span>SAMORA LEDGER TECH</span>
-        </Link>
-
-        <nav
-          aria-label="Main navigation"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          {links.map((link) => {
-            const active =
-              link.href === "/" ? pathname === "/" : pathname === link.href || pathname.startsWith(link.href + "/");
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  minHeight: 42,
-                  padding: "10px 16px",
-                  borderRadius: 8,
-                  color: active ? "#ffffff" : "#dbe5f3",
-                  background: active ? "#0f766e" : "transparent",
-                  border: active ? "1px solid #2dd4bf" : "1px solid transparent",
-                  fontSize: 14,
-                  fontWeight: active ? 700 : 600,
-                  whiteSpace: "nowrap",
-                  transition: "background 150ms ease, border-color 150ms ease",
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </header>
-  );
+ return <>
+  <header className="workspace-header">
+   <div className="workspace-header-left">
+    <Link href="/" className="workspace-brand" aria-label="Samora Ledger Tech home">
+     <span className="brand-mark"><Building2 size={19}/></span>
+     <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span></span>
+    </Link>
+    <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
+   </div>
+   <div id="header-actions-slot" className="header-actions-slot" aria-label="Page actions"/>
+   {pathname === "/" && <div className="header-actions" aria-label="Executive overview actions"><button className="btn btn-secondary" type="button" onClick={()=>window.dispatchEvent(new Event("samora:refresh-overview"))}><RefreshCw size={14}/>Refresh</button><button className="btn" type="button" onClick={()=>window.dispatchEvent(new Event("samora:run-analytics"))}><Activity size={14}/>Run analytics</button></div>}
+   {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle header-mobile-menu" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
+  </header>
+  {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}
+  <aside className={"workspace-sidebar"+(collapsed?" collapsed":"")+(mobileOpen?" mobile-open":"")} style={{width:collapsed?76:188}} aria-label="Main navigation">
+   <div className="sidebar-topline">
+    <span className="sidebar-section-label"></span>
+    <button className="sidebar-toggle desktop-toggle" type="button" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?"Expand navigation":"Collapse navigation"} aria-expanded={!collapsed}>
+     {collapsed?<PanelLeftOpen size={18}/>:<PanelLeftClose size={18}/>}
+    </button>
+    <button className="sidebar-close mobile-toggle" type="button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={18}/></button>
+   </div>
+   <nav className="sidebar-nav">
+    {groups.map(group=><section className="sidebar-group" key={group.label}>
+     <h2 className="sidebar-group-title">{group.label}</h2>
+     {group.items.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={collapsed?item.label:undefined} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
+    </section>)}
+   </nav>
+   <div className="sidebar-user" aria-label="Signed-in user">
+    <span className="sidebar-user-avatar"><UserRound size={17}/></span>
+    <span className="sidebar-user-copy"><small>Signed in as</small><strong>Executive user</strong></span>
+    <span className="sidebar-user-status" aria-label="Signed-in session active"/>
+    <ChevronDown className="sidebar-user-chevron" size={15}/>
+   </div>
+  </aside>
+ </>;
 }

@@ -372,3 +372,82 @@ body{background:#ffffff;color:#1a1a1a}
 .governance-callout p{color:#62543a}
 .login-form input:focus{border-color:#f4b335;box-shadow:0 0 0 3px rgba(244,179,53,.18)}
 ::selection{background:#f4d78d;color:#0b1d34}
+
+
+/* Executive banking visual theme — inspired by the supplied navy/gold reference */
+:root{
+ --ink:#1a1a1a;
+ --ink-2:#0b1d34;
+ --teal:#0b1d34;
+ --teal-dark:#071629;
+ --muted:#667487;
+ --line:#e2e7ed;
+ --canvas:#f4f6f8;
+ --white:#ffffff;
+}
+body{background:#f4f6f8;color:#1a1a1a}
+.workspace-header{background:#0b1d34;border-bottom:1px solid rgba(255,255,255,.1)}
+.workspace-brand .brand-mark{background:rgba(244,179,53,.12);border:1px solid rgba(244,179,53,.55);color:#f4b335}
+.workspace-brand .brand-sub{color:#b8c5d3}
+.workspace-sidebar{background:#fff;border-right:1px solid #e1e6ec;box-shadow:4px 0 22px rgba(11,29,52,.035)}
+.sidebar-topline{border-bottom:1px solid #edf0f3}
+.sidebar-section-label,.sidebar-group-title{color:#7c8998;letter-spacing:.14em}
+.sidebar-link{color:#465568;border-radius:6px}
+.sidebar-link:hover{background:#f2f5f8;color:#0b1d34}
+.sidebar-link.active{background:#fff5df;color:#0b1d34;border-left:3px solid #f4b335}
+.sidebar-link.active svg{color:#0b1d34}
+.sidebar-user{border-top:1px solid #e8edf1}
+.sidebar-user-avatar{background:#fff5df;color:#0b1d34;border-color:#f4d78d}
+.main-shell{background:transparent}
+.page-heading{
+ position:relative;isolation:isolate;overflow:hidden;
+ min-height:164px;margin:0 0 22px;padding:27px 30px;
+ align-items:center;border-radius:10px;
+ background:#0b1d34;color:#fff;
+ box-shadow:0 8px 24px rgba(11,29,52,.10)
+}
+.page-heading:after{
+ content:"";position:absolute;z-index:-1;right:2%;top:-42px;width:360px;height:230px;opacity:.2;
+ background:
+ linear-gradient(180deg,transparent 0 46%,rgba(244,179,53,.45) 46.5%,transparent 47%),
+ linear-gradient(90deg,transparent 0 12%,rgba(170,194,216,.38) 12.4% 13%,transparent 13.4% 29%,rgba(170,194,216,.38) 29.4% 30%,transparent 30.4% 47%,rgba(170,194,216,.38) 47.4% 48%,transparent 48.4% 65%,rgba(170,194,216,.38) 65.4% 66%,transparent 66.4%);
+ clip-path:polygon(0 80%,12% 60%,23% 68%,35% 43%,48% 54%,61% 25%,74% 37%,88% 8%,100% 14%,100% 100%,0 100%);
+ border-bottom:1px solid rgba(244,179,53,.35)
+}
+.page-heading .eyebrow{color:#f4b335;margin-bottom:10px}
+.page-heading .page-title{color:#fff;font-size:clamp(26px,3vw,34px)}
+.page-heading .page-subtitle{color:#c3cfdb;max-width:680px}
+.page-heading .btn-secondary{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.25);color:#fff}
+.page-heading .btn-secondary:hover{background:rgba(255,255,255,.15)}
+.page-heading .btn{position:relative;z-index:1}
+.kpi-card,.panel,.profile-stat{
+ background:#fff;border:1px solid #e1e7ed;border-radius:9px;
+ box-shadow:0 3px 13px rgba(11,29,52,.035)
+}
+.kpi-card{border-top:3px solid #f4b335;padding-top:17px}
+.kpi-card:after{border-color:rgba(11,29,52,.08)}
+.kpi-label{color:#647386}
+.kpi-value{color:#0b1d34}
+.panel-title{color:#0b1d34}
+.panel-period{background:#fff6e3;border-color:#f1d89e;color:#72551d}
+.btn{background:#f4b335;border-color:#f4b335;color:#0b1d34;font-weight:800}
+.btn:hover{background:#e5a323;border-color:#e5a323;color:#0b1d34}
+.btn-secondary{background:#fff;color:#0b1d34;border-color:#cfd8e1}
+.btn-secondary:hover{background:#f3f6f9;color:#0b1d34;border-color:#b8c5d2}
+.btn-quiet{background:#fff6e3;border-color:#f1d89e;color:#0b1d34}
+.search-field,.filter-select,.filter-control{border-color:#d9e0e7;background:#fff}
+.table th{background:#f2f5f8;color:#526276}
+.table tbody tr:hover{background:#f7f9fb}
+.link-action{color:#0b1d34}
+.explanation-box{background:#fff8e9;border-left-color:#f4b335;color:#3e4b5b}
+.site-footer{background:#08182b;border-top:3px solid #f4b335}
+.footer-links a:hover{color:#f4b335}
+.report-cover{background:#0b1d34;position:relative}
+.report-brand,.report-kicker{color:#f4b335}
+.governance-banner{background:#fff8e9;border-color:#f1d89e}
+.governance-callout{background:#fff8e9;border-color:#f1d89e}
+@media(max-width:760px){
+ .page-heading{padding:23px 20px;min-height:0;align-items:flex-start}
+ .page-heading:after{right:-130px;opacity:.12}
+ .heading-actions{position:relative;z-index:1}
+}

@@ -12,7 +12,8 @@ router = APIRouter(prefix="/api/v1/growth", tags=["Customer Growth Intelligence"
 def _rows(db, table, fields="*", page_size=1000):
     rows=[]; offset=0
     while True:
-        page=(db.table(table).select(fields).order("customer_id" if table in {"customers","customer_features","transactions","customer_products","customer_value_scores","product_recommendations"} else "created_at")
+        order_key={"customers":"customer_id","customer_features":"customer_id","transactions":"transaction_id","customer_products":"customer_product_id","customer_value_scores":"value_score_id","product_recommendations":"recommendation_id"}.get(table,"created_at")
+        page=(db.table(table).select(fields).order(order_key)
               .range(offset,offset+page_size-1).execute().data or [])
         rows.extend(page)
         if len(page)<page_size: return rows
@@ -114,10 +115,17 @@ def run_growth_intelligence(x_api_key:str|None=Header(default=None),authorizatio
     db=get_database(); today=date.today().isoformat(); cutoff=(datetime.now(timezone.utc)-timedelta(days=90)).isoformat()
     customers=_rows(db,"customers","customer_id,account_tier,created_at,full_name")
     if not customers:return {"customers_processed":0,"value_scores_written":0,"recommendations_written":0,"insights_written":0,"message":"No customer records are available. Import approved BancABC data before running growth intelligence."}
-    features=db.table("customer_features").select("customer_id,balance_avg_30d,frequency_30d,monetary_spend_90d,behavior_segment").execute().data or []
-    transactions=db.table("transactions").select("customer_id,amount,transaction_type,merchant_category").gte("timestamp",cutoff).execute().data or []
+    features=_rows(db,"customer_features","customer_id,balance_avg_30d,frequency_30d,monetary_spend_90d,behavior_segment")
+    transactions=[]; offset=0; page_size=1000
+    while True:
+        page=(db.table("transactions").select("transaction_id,customer_id,amount,transaction_type,merchant_category")
+              .gte("timestamp",cutoff).order("transaction_id").range(offset,offset+page_size-1).execute().data or [])
+        transactions.extend(page)
+        if len(page)<page_size: break
+        offset+=page_size
     products=db.table("banking_products").select("*").eq("is_active",True).execute().data or []
-    owned=db.table("customer_products").select("customer_id,product_id,status").eq("status","active").execute().data or []
+    owned=_rows(db,"customer_products","customer_id,product_id,status")
+    owned=[x for x in owned if x.get("status")=="active"]
     fm={x["customer_id"]:x for x in features}; owned_map=defaultdict(set)
     for x in owned:owned_map[x["customer_id"]].add(x["product_id"])
     activity=defaultdict(lambda:{"count":0,"debit":0.0,"credit":0.0,"travel":0.0,"transfers":0,"salary":0.0})

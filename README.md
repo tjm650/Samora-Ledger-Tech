@@ -22,6 +22,7 @@ Migrations currently include:
 - `20261113123509_relocate_trigram_extension_and_deduplicate_index.sql`
 - `20261113123755_crm_directory_respects_configured_risk_thresholds.sql`
 - `20261113123927_aggregate_risk_history_trends.sql`
+- `20261113124048_backfill_existing_feature_and_risk_baselines.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 

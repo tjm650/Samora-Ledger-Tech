@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import HeaderActions from "@/app/components/header-actions";
 import {AlertTriangle,ShieldCheck,ShieldAlert} from "lucide-react";
 import {Bar,BarChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 import {getExecutiveOverview,number,type ExecutiveOverview} from "@/lib/executive";
@@ -9,7 +10,7 @@ export default function RiskPage(){
  useEffect(()=>{getExecutiveOverview(90).then(setData).catch(e=>setError(e.message||"Unable to load risk analytics")).finally(()=>setLoading(false))},[]);
  const metrics=data?.metrics;
  return <>
-  <div className="page-heading page-heading-actions"><span className="badge neutral"><ShieldCheck size={12}/>Aggregate oversight</span></div>
+  <HeaderActions><span className="badge neutral"><ShieldCheck size={12}/>Aggregate oversight</span></HeaderActions>
   {error&&<div className="alert" role="alert">{error}</div>}
   <div className="kpi-grid"><div className="kpi-card"><div className="kpi-label">High-risk exposure</div><div className="kpi-value">{loading?"—":number(metrics?.high_risk_relationships||0)}</div><div className="kpi-note">Risk score of 60 or above</div></div><div className="kpi-card"><div className="kpi-label">High-risk share</div><div className="kpi-value">{loading?"—":(metrics?.high_risk_share_pct||0).toFixed(1)+"%"}</div><div className="kpi-note">Share of evaluated relationships</div></div><div className="kpi-card"><div className="kpi-label">Average risk score</div><div className="kpi-value">{loading?"—":(metrics?.average_risk_score||0).toFixed(1)}</div><div className="kpi-note">0–100 rule-based score</div></div><div className="kpi-card"><div className="kpi-label">Relationships evaluated</div><div className="kpi-value">{loading?"—":number(metrics?.evaluated_relationships||0)}</div><div className="kpi-note">Latest available analytics run</div></div></div>
   <div className="dashboard-grid"><section className="panel"><div className="panel-heading"><div><h2 className="panel-title">Risk segmentation</h2><p className="panel-caption">Aggregate distribution across all evaluated relationships</p></div></div><div className="risk-chart-area risk-chart-large">{loading?<div className="empty-state">Loading risk segmentation…</div>:data?.risk_distribution?.some(x=>x.count>0)?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data.risk_distribution} dataKey="count" nameKey="name" innerRadius={76} outerRadius={116} paddingAngle={4}>{data.risk_distribution.map((x,i)=><Cell key={x.name} fill={colors[i]}/>)}</Pie><Tooltip formatter={v=>number(Number(v))}/></PieChart></ResponsiveContainer>:<div className="empty-state">No risk scoring results are available.</div>}</div><div className="risk-legend risk-legend-wide">{data?.risk_distribution.map((x,i)=><div key={x.name}><span><i className="legend-dot" style={{background:colors[i]}}/>{x.name}</span><strong>{number(x.count)}</strong></div>)}</div></section>

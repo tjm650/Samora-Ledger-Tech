@@ -4,7 +4,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {useEffect,useState} from "react";
 import {
- Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,
+ Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,ShoppingBag,
  PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings,RefreshCw,Activity
 } from "lucide-react";
 
@@ -22,7 +22,7 @@ const groups=[
   {href:"/risk",label:"Risks",icon:ShieldAlert},
   {href:"/governance",label:"Model governance",icon:Scale}
  ]},
- {label:"Insights & Reporting",items:[
+ {label:"Customer Growth",items:[\n  {href:"/growth",label:"Growth intelligence",icon:ShoppingBag}\n ]},\n {label:"Insights & Reporting",items:[
   {href:"/analytics",label:"Analytics",icon:BarChart3},
   {href:"/reports",label:"Management reports",icon:FileText}
  ]},
@@ -44,7 +44,7 @@ export default function Navbar(){
      <span className="brand-mark"><Building2 size={19}/></span>
      <span className="workspace-brand-copy"><span className="brand-name"> SAMORA LEDGER TECH</span></span>
     </Link>
-    <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
+    <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management","/growth":"Customer Growth Intelligence"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
    </div>
    <div id="header-actions-slot" className="header-actions-slot" aria-label="Page actions"/>
    {pathname === "/" && <div className="header-actions" aria-label="Executive overview actions"><button className="btn btn-secondary" type="button" onClick={()=>window.dispatchEvent(new Event("samora:refresh-overview"))}><RefreshCw size={14}/>Refresh</button><button className="btn" type="button" onClick={()=>window.dispatchEvent(new Event("samora:run-analytics"))}><Activity size={14}/>Run analytics</button></div>}

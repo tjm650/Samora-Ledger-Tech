@@ -107,19 +107,19 @@ def run_pipeline():
                  .order("version",desc=True).limit(1).execute().data or [])
     scoring_config=config_rows[0]["configuration_value"] if config_rows else {}
     configuration_version=int(config_rows[0]["version"]) if config_rows else 0
+    evaluated_at=datetime.now(timezone.utc)
     features=[]; insights=[]
     for row in frame.itertuples(index=False):
         data=row._asdict(); score=score_customer(row,scoring_config)
         features.append({k:data[k] for k in ("customer_id","recency_days","frequency_30d","monetary_spend_30d","monetary_spend_60d","monetary_spend_90d","average_transaction_value_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")})
-        insights.append({"customer_id":data["customer_id"],**score})
+        insights.append({"customer_id":data["customer_id"],**score,"evaluated_at":evaluated_at.isoformat()})
     legacy_feature_fields=("customer_id","recency_days","frequency_30d","monetary_spend_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")
     for batch in range(0,len(features),250):
-        legacy_rows=[{key:row[key] for key in legacy_feature_fields} for row in features[batch:batch+250]]
+        legacy_rows=[{**{key:row[key] for key in legacy_feature_fields},"updated_at":evaluated_at.isoformat()} for row in features[batch:batch+250]]
         db.table("customer_features").upsert(legacy_rows,on_conflict="customer_id").execute()
         db.table("predictive_insights").upsert(insights[batch:batch+250],on_conflict="customer_id").execute()
 
     # Append immutable feature and risk snapshots for audit and historical monitoring.
-    evaluated_at=datetime.now(timezone.utc)
     version=(db.table("model_versions").select("model_version_id")
              .eq("version","rules-v1").maybe_single().execute().data or {})
     run_row={

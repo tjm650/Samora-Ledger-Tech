@@ -14,3 +14,7 @@ services:
         generateValue: true
       - key: API_CORS_ORIGINS
         value: https://samora-ledger-tech-tinotendajmuyambo.vercel.app
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini

@@ -63,6 +63,7 @@ export default function Navbar(){
      <span className="brand-mark"><Building2 size={19}/></span>
      <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span><span className="brand-sub">EXECUTIVE INTELLIGENCE</span></span>
     </Link>
+    {pathname === "/" && <h1 className="header-page-title">Executive Overview</h1>}
    </div>
   </header>
   {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}

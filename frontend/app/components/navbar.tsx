@@ -10,23 +10,23 @@ import {
 
 const groups=[
  {label:"Overview",items:[
-  {href:"/",label:"Executive overview",icon:LayoutDashboard}
+  {href:"/",label:"Overview",icon:LayoutDashboard}
  ]},
- {label:"Customer Management",items:[
-  {href:"/crm",label:"Customer relationship management",icon:Users}
+ {label:"",items:[
+  {href:"/crm",label:"crm",icon:Users}
  ]},
  {label:"Transaction Management",items:[
   {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight}
  ]},
  {label:"Risk & Controls",items:[
-  {href:"/risk",label:"Risk & exposure",icon:ShieldAlert},
+  {href:"/risk",label:"Risks",icon:ShieldAlert},
   {href:"/governance",label:"Model governance",icon:Scale}
  ]},
  {label:"Insights & Reporting",items:[
-  {href:"/analytics",label:"Analytics & trends",icon:BarChart3},
+  {href:"/analytics",label:"Analytics",icon:BarChart3},
   {href:"/reports",label:"Management reports",icon:FileText}
  ]},
- {label:"Workspace",items:[
+ {label:"",items:[
   {href:"/help",label:"Help",icon:HelpCircle},
   {href:"/settings",label:"Settings",icon:Settings}
  ]}
@@ -61,16 +61,16 @@ export default function Navbar(){
    <div className="workspace-header-left">
     <Link href="/" className="workspace-brand" aria-label="Samora Ledger Tech home">
      <span className="brand-mark"><Building2 size={19}/></span>
-     <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span><span className="brand-sub">EXECUTIVE INTELLIGENCE</span></span>
+     <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span></span>
     </Link>
-    {pathname === "/" && <h1 className="header-page-title">Executive Overview</h1>}
+    {pathname === "/" && <h1 className="header-page-title">Overview</h1>}
    </div>
   </header>
   {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}
   <aside className={"workspace-sidebar"+(collapsed?" collapsed":"")+(mobileOpen?" mobile-open":"")} style={{width:collapsed?76:sidebarWidth}} aria-label="Main navigation">
    <div className="sidebar-topline">
-    <span className="sidebar-section-label">WORKSPACE</span>
+    <span className="sidebar-section-label"></span>
     <button className="sidebar-toggle desktop-toggle" type="button" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?"Expand navigation":"Collapse navigation"} aria-expanded={!collapsed}>
      {collapsed?<PanelLeftOpen size={18}/>:<PanelLeftClose size={18}/>}
     </button>

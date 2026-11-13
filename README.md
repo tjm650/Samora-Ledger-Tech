@@ -23,6 +23,7 @@ Migrations currently include:
 - `20261113123755_crm_directory_respects_configured_risk_thresholds.sql`
 - `20261113123927_aggregate_risk_history_trends.sql`
 - `20261113124048_backfill_existing_feature_and_risk_baselines.sql`
+- `20261113124150_risk_score_movements.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 
@@ -47,7 +48,7 @@ All staff-facing data and management APIs require the private `X-API-Key` header
 - `GET|POST /api/v1/crm/customers/{customer_id}/interactions`
 - `GET|POST /api/v1/crm/tasks`, `PATCH /api/v1/crm/tasks/{task_id}`
 - `GET /api/v1/crm/customers/{customer_id}/tasks`
-- `GET /api/v1/risk/summary`, `/trends`, `/alerts`, `/thresholds`
+- `GET /api/v1/risk/summary`, `/trends`, `/movements`, `/alerts`, `/thresholds`
 - `GET /api/v1/reports`, `POST /api/v1/reports/generate`, `GET /api/v1/reports/{report_id}`, `GET /api/v1/reports/{report_id}/download?format=csv`
 - `GET /api/v1/governance/models`, `/runs`, `/configuration`, `/audit-logs`
 - `GET /api/v1/settings/me`, `/preferences`, `/organisation`

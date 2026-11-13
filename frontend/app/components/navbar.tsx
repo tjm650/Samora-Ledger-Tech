@@ -12,7 +12,10 @@ const groups=[
  {label:"Overview",items:[
   {href:"/",label:"Executive overview",icon:LayoutDashboard}
  ]},
- {label:"Customer Management",items:[\n  {href:"/crm",label:"Customer relationship management",icon:Users}\n ]},\n {label:"Transaction Management",items:[
+ {label:"Customer Management",items:[
+  {href:"/crm",label:"Customer relationship management",icon:Users}
+ ]},
+ {label:"Transaction Management",items:[
   {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight}
  ]},
  {label:"Risk & Controls",items:[

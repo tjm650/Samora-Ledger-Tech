@@ -341,3 +341,25 @@ select jsonb_build_object(
 $$;
 revoke all on function public.crm_customer_directory(text,text,text,text,date,date,text,text,integer,integer) from public, anon, authenticated;
 grant execute on function public.crm_customer_directory(text,text,text,text,date,date,text,text,integer,integer) to service_role;
+
+
+insert into public.report_definitions(report_key,name,description) values
+ ('executive_summary','Executive Summary','Portfolio-wide executive metrics and risk overview.'),
+ ('transaction_performance','Transaction Performance','Transaction volumes, values, categories and channels.'),
+ ('churn_risk','Churn Risk','Rules-based churn-risk distribution and drivers.'),
+ ('customer_segmentation','Customer Segmentation','Observed account tiers and behavioural segments.'),
+ ('risk_drivers','Risk Drivers','Observed churn-risk driver distribution.')
+on conflict (report_key) do nothing;
+
+insert into public.model_configurations(configuration_key,configuration_value,version)
+values ('rules-v1-scoring-baseline','{"base_score":8,"salary_disruption_points":42,"maximum_recency_points":24,"velocity_decline_points":20,"low_balance_points":18,"drawdown_points":12,"risk_bands":{"low_max":29.99,"moderate_max":59.99}}'::jsonb,1)
+on conflict (configuration_key,version) do nothing;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname='risk_history_model_run_fk') then
+    alter table public.risk_score_history
+      add constraint risk_history_model_run_fk
+      foreign key (model_run_id) references public.model_runs(model_run_id) on delete set null;
+  end if;
+end $$;

@@ -1,19 +1,33 @@
 "use client";
 import {useEffect,useState} from "react";
-import {useRouter} from "next/navigation";
-import {SlidersHorizontal,ShieldCheck,LogOut,UserRound} from "lucide-react";
-import {createClient} from "@/lib/supabase/client";
+import {SlidersHorizontal,PanelLeft,ShieldCheck} from "lucide-react";
+
 export default function SettingsPage(){
- const router=useRouter();const [profile,setProfile]=useState<any>(null);const [periodDays,setPeriodDays]=useState("90");const [message,setMessage]=useState("");const [loading,setLoading]=useState(true);
- useEffect(()=>{void Promise.all([fetch("/api/settings/me",{cache:"no-store"}).then(r=>r.json()),fetch("/api/settings/preferences",{cache:"no-store"}).then(r=>r.json())]).then(([p,preferences])=>{setProfile(p);const saved=(preferences.preferences||[]).find((x:any)=>x.preference_key==="default_reporting_period");if(saved?.preference_value?.value)setPeriodDays(String(saved.preference_value.value))}).catch(()=>setMessage("Unable to retrieve staff settings.")).finally(()=>setLoading(false))},[]);
- async function save(){setMessage("");try{const r=await fetch("/api/settings/preferences",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({preference_key:"default_reporting_period",preference_value:{value:periodDays}})});const b=await r.json();if(!r.ok)throw new Error(b.error||"Unable to save preference");setMessage("Your preference has been saved.")}catch(e){setMessage(e instanceof Error?e.message:"Unable to save preference")}}
- async function signOut(){const supabase=createClient();await supabase.auth.signOut();router.replace("/login");router.refresh()}
+ const [periodDays,setPeriodDays]=useState("90");
+ const [message,setMessage]=useState("");
+ const [loading,setLoading]=useState(true);
+ useEffect(()=>{
+  let active=true;
+  void fetch("/api/settings/preferences",{cache:"no-store"})
+   .then(async r=>{const b=await r.json();if(!r.ok)throw new Error(b.error||"Unable to retrieve workspace preferences");return b})
+   .then(b=>{if(!active)return;const saved=(b.preferences||[]).find((x:any)=>x.preference_key==="default_reporting_period");if(saved?.preference_value?.value)setPeriodDays(String(saved.preference_value.value))})
+   .catch(e=>{if(active)setMessage(e instanceof Error?e.message:"Unable to retrieve workspace preferences.")})
+   .finally(()=>{if(active)setLoading(false)});
+  return()=>{active=false};
+ },[]);
+ async function save(){
+  setMessage("");
+  try{
+   const r=await fetch("/api/settings/preferences",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({preference_key:"default_reporting_period",preference_value:{value:periodDays}})});
+   const b=await r.json();if(!r.ok)throw new Error(b.error||"Unable to save preference");
+   setMessage("Your reporting preference has been saved.");
+  }catch(e){setMessage(e instanceof Error?e.message:"Unable to save preference")}
+ }
  return <>
   <div className="governance-grid">
-   <section className="panel"><UserRound size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Staff profile</h2><p className="panel-caption">Authenticated workspace identity and assigned access role.</p>{loading?<div className="empty-state">Loading staff profile…</div>:<div className="executive-indicators"><div><span>Display name</span><strong>{profile?.display_name||"—"}</strong></div><div><span>Work email</span><strong className="status-value">{profile?.email||"—"}</strong></div><div><span>Role</span><strong>{profile?.role||"Not assigned"}</strong></div><div><span>Account status</span><strong>{profile?.is_active===false?"Inactive":"Active"}</strong></div></div>}<button className="btn btn-secondary" style={{marginTop:18}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button></section>
-   <section className="panel"><SlidersHorizontal size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Workspace preferences</h2><p className="panel-caption">Preferences are stored against your authenticated staff account.</p><label className="block text-sm font-medium text-slate-700">Default analytics reporting period<select className="filter-select" style={{display:"block",marginTop:8}} value={periodDays} onChange={e=>setPeriodDays(e.target.value)}><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select></label><button className="btn" style={{marginTop:16}} onClick={()=>void save()}>Save preference</button>{message&&<p className="governance-footnote" role="status">{message}</p>}</section>
+   <section className="panel"><SlidersHorizontal size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Navigation layout</h2><p className="panel-caption">Navigate the workspace using the persistent sidebar.</p><ul className="business-list"><li>Use the collapse control to switch to compact icon navigation.</li><li>On mobile, open the navigation using the menu control in the header.</li><li>Choose Overview, CRM, Transactions, Risk, Analytics, Reports or Model Governance from the sidebar.</li><li>Customer profiles open directly from the CRM directory.</li></ul></section>
+   <section className="panel"><PanelLeft size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Workspace preferences</h2><p className="panel-caption">Staff-specific reporting preferences are unavailable in the public demo workspace.</p>{loading?<div className="empty-state">Loading workspace preferences…</div>:<><label className="block text-sm font-medium text-slate-700">Default analytics reporting period<select className="filter-select" style={{display:"block",marginTop:8}} value={periodDays} onChange={e=>setPeriodDays(e.target.value)}><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select></label><button className="btn" style={{marginTop:16}} onClick={()=>void save()} disabled>Read-only in demo mode</button></>}{message&&<p className="governance-footnote" role="status">{message}</p>}</section>
   </div>
-  <div className="governance-grid" style={{marginTop:18}}><section className="panel"><ShieldCheck size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Access and security</h2><p className="panel-caption">The workspace now requires a Supabase Auth session and a trusted staff role stored in app_metadata.</p><ul className="business-list"><li>Executive, Risk Analyst, Relationship Manager and Administrator roles are recognised.</li><li>Role checks are enforced in the middleware and again on the backend for protected customer and management APIs.</li><li>New staff accounts must be provisioned by an administrator; public registration is disabled.</li><li>Supabase service-role and Render API credentials remain server-side.</li></ul></section>
-   <section className="panel"><h2 className="panel-title">Organisation configuration</h2><p className="panel-caption">Organisation-level settings are restricted to administrator and executive roles. Updates are recorded in the governance audit log.</p><p className="governance-footnote">Organisation settings endpoints are available for integration. A multi-tenant organisation selector and administration form are not yet part of this frontend.</p></section></div>
+  <div className="governance-grid" style={{marginTop:18}}><section className="panel"><ShieldCheck size={20} color="#147d78"/><h2 className="panel-title" style={{marginTop:12}}>Demo workspace access</h2><p className="panel-caption">The public demo workspace provides read-only access to synthetic banking analytics. Staff-specific preferences and administrative changes remain protected.</p><p className="governance-footnote">Do not place real customer or confidential banking information in this demonstration environment.</p></section></div>
  </>;
 }

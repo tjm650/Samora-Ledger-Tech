@@ -21,6 +21,16 @@ def _db():
         raise HTTPException(503, "Database connection is not configured")
     return create_client(url, key)
 
+def _demo_read(x_api_key: str | None, authorization: str | None, roles=ALL_STAFF_ROLES):
+    """Permit only explicitly enabled, API-key-gated demo reads without a staff session."""
+    if os.getenv("DEMO_PUBLIC_READS") == "true":
+        import secrets
+        expected = os.getenv("API_KEY")
+        if not expected or not x_api_key or not secrets.compare_digest(x_api_key, expected):
+            raise HTTPException(401, "Invalid API key")
+        return None
+    return _staff(x_api_key, authorization, roles)
+
 def _staff(x_api_key: str | None, authorization: str | None, roles=CRM_ROLES):
     import secrets
     expected = os.getenv("API_KEY")
@@ -97,7 +107,7 @@ def crm_customers(
     x_api_key: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     if created_from and created_to and created_from > created_to:
         raise HTTPException(422, "created_from must not be after created_to")
     try:
@@ -120,7 +130,7 @@ def crm_customer_profile(
     x_api_key: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         db = _db()
         customer = db.table("customers").select("customer_id,full_name,email,account_tier,created_at").eq("customer_id", str(customer_id)).maybe_single().execute().data
@@ -253,7 +263,7 @@ def update_task(task_id: UUID, payload: TaskPatch, x_api_key: str | None = Heade
 
 @router.get("/risk/summary")
 def risk_summary(x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         db = _db()
         rows = db.table("predictive_insights").select("churn_risk_score,primary_churn_driver,evaluated_at").range(0,9999).execute().data or []
@@ -272,7 +282,7 @@ def risk_summary(x_api_key: str | None = Header(default=None), authorization: st
 
 @router.get("/risk/trends")
 def risk_trends(days: int = Query(90, ge=7, le=730), interval: Literal["day","week","month"] = "day", x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         cutoff = (datetime.now(timezone.utc)-timedelta(days=days)).isoformat()
         rows = _db().rpc("risk_history_trend", {"p_since":cutoff,"p_interval":interval}).execute().data or []
@@ -284,7 +294,7 @@ def risk_trends(days: int = Query(90, ge=7, le=730), interval: Literal["day","we
 
 @router.get("/risk/alerts")
 def risk_alerts(status: Literal["open", "acknowledged", "resolved"] | None = "open", page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         q = _db().table("risk_alerts").select("*", count="exact")
         if status: q = q.eq("status", status)
@@ -312,7 +322,7 @@ def update_risk_alert(alert_id: UUID, payload: AlertPatch, x_api_key: str | None
 
 @router.get("/risk/customers/{customer_id}/history")
 def customer_risk_history(customer_id: UUID, page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=100), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         result = _db().table("risk_score_history").select("*", count="exact").eq("customer_id", str(customer_id)).order("assessed_at", desc=True).range((page-1)*page_size, page*page_size-1).execute()
         return {"history": result.data or [], "total": result.count or 0, "page": page, "page_size": page_size}
@@ -328,7 +338,7 @@ class RiskThresholdUpdate(BaseModel):
 
 @router.get("/risk/thresholds")
 def get_risk_thresholds(x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         rows = _db().table("risk_thresholds").select("*").order("name").execute().data or []
         return {"thresholds": rows}
@@ -383,7 +393,7 @@ def list_staff(x_api_key: str | None = Header(default=None), authorization: str 
 
 @router.get("/risk/movements")
 def risk_movements(days: int = Query(90, ge=7, le=730), direction: Literal["all","increased","decreased"] = "all", x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
-    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    _demo_read(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).isoformat()
         result=_db().rpc("risk_score_movements",{"p_since":cutoff,"p_direction":direction}).execute().data

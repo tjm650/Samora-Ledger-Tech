@@ -1,8 +1,9 @@
 from __future__ import annotations
 import logging
+import os
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
-from crm_api import _db, _staff, ALL_STAFF_ROLES
+from crm_api import _db, _staff, _demo_read, ALL_STAFF_ROLES
 
 router=APIRouter(prefix="/api/v1/settings",tags=["workspace settings"])
 log=logging.getLogger("samora.settings")
@@ -28,6 +29,9 @@ def my_profile(x_api_key:str|None=Header(default=None),authorization:str|None=He
 
 @router.get("/preferences")
 def get_preferences(x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    if os.getenv("DEMO_PUBLIC_READS") == "true":
+        _demo_read(x_api_key,authorization,ALL_STAFF_ROLES)
+        return {"preferences": [], "demo_mode": True}
     actor=_staff(x_api_key,authorization,ALL_STAFF_ROLES)
     try:
         rows=_db().table("user_preferences").select("*").eq("user_id",actor["user_id"]).execute().data or []

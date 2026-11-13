@@ -63,10 +63,10 @@ export default function Navbar(){
      <span className="brand-mark"><Building2 size={19}/></span>
      <span className="workspace-brand-copy"><span className="brand-name">SAMORA LEDGER TECH</span></span>
     </Link>
-    {pathname === "/" && <h1 className="header-page-title">Overview</h1>}
+    <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
    </div>
+   {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle header-mobile-menu" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   </header>
-  {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}
   <aside className={"workspace-sidebar"+(collapsed?" collapsed":"")+(mobileOpen?" mobile-open":"")} style={{width:collapsed?76:sidebarWidth}} aria-label="Main navigation">
    <div className="sidebar-topline">

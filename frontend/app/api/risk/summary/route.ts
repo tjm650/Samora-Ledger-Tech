@@ -1,0 +1,3 @@
+import {samoraRequest} from "@/lib/samora-api";
+export const dynamic="force-dynamic";
+export async function GET(){return samoraRequest("/api/v1/risk/summary")}

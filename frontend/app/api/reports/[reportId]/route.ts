@@ -1,0 +1,1 @@
+import {samoraRequest} from "@/lib/samora-api";export const dynamic="force-dynamic";export async function GET(_r:Request,{params}:{params:Promise<{reportId:string}>}){const {reportId}=await params;return samoraRequest(`/api/v1/reports/${encodeURIComponent(reportId)}`)}

@@ -1,0 +1,1 @@
+import {NextRequest} from "next/server";import {samoraRequest} from "@/lib/samora-api";export const dynamic="force-dynamic";export async function GET(r:NextRequest){return samoraRequest(`/api/v1/risk/movements${r.nextUrl.search}`)}

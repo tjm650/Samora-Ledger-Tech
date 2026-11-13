@@ -1,0 +1,1 @@
+import {NextRequest,NextResponse} from "next/server";import {samoraRequest} from "@/lib/samora-api";export const dynamic="force-dynamic";export async function POST(r:NextRequest){try{return await samoraRequest("/api/v1/reports/generate",{method:"POST",body:JSON.stringify(await r.json())})}catch{return NextResponse.json({error:"Invalid report request."},{status:400})}}

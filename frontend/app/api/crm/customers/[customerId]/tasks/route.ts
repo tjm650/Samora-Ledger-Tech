@@ -1,0 +1,1 @@
+import {NextRequest} from "next/server";import {samoraRequest} from "@/lib/samora-api";export const dynamic="force-dynamic";export async function GET(r:NextRequest,{params}:{params:Promise<{customerId:string}>}){const {customerId}=await params;return samoraRequest(`/api/v1/crm/customers/${encodeURIComponent(customerId)}/tasks${r.nextUrl.search}`)}

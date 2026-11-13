@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging, os, secrets, time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from collections import Counter, defaultdict
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Query
@@ -14,12 +14,28 @@ app=FastAPI(title="Samora Ledger Tech API",version="1.1.0")
 _OVERVIEW_CACHE:dict[int,tuple[float,dict]]={}
 _OVERVIEW_CACHE_TTL_SECONDS=30
 origins=[x.strip() for x in os.getenv("API_CORS_ORIGINS","http://localhost:3000").split(",") if x.strip()]
-app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=True,allow_methods=["GET","POST"],allow_headers=["Authorization","Content-Type","X-API-Key"])
+app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=True,allow_methods=["GET","POST","PATCH"],allow_headers=["Authorization","Content-Type","X-API-Key"])
 
 def authorize(x_api_key: str|None):
     expected=os.getenv("API_KEY")
     if not expected: raise HTTPException(503,"API_KEY is not configured")
     if not x_api_key or not secrets.compare_digest(x_api_key,expected): raise HTTPException(401,"Invalid API key")
+
+def authorize_staff(x_api_key: str|None, authorization: str|None, allowed_roles=None):
+    authorize(x_api_key)
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401,"Staff sign-in required")
+    token=authorization.split(" ",1)[1].strip()
+    if not token: raise HTTPException(401,"Staff sign-in required")
+    try:
+        user=get_database().auth.get_user(token).user
+    except Exception as exc:
+        raise HTTPException(401,"Staff session is invalid or expired") from exc
+    if not user: raise HTTPException(401,"Staff session is invalid or expired")
+    role=(getattr(user,"app_metadata",None) or {}).get("role")
+    allowed=allowed_roles or {"admin","analyst","relationship_manager","executive"}
+    if role not in allowed: raise HTTPException(403,"Your staff role is not authorised")
+    return user
 
 def get_database():
     from supabase import create_client
@@ -124,8 +140,8 @@ def pipeline(x_api_key: str|None=Header(default=None)):
         raise HTTPException(500,"Pipeline failed; inspect service logs") from exc
 
 @app.get("/api/v1/executive/overview")
-def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:str|None=Header(default=None)):
-    authorize(x_api_key)
+def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     try:
         cached=_OVERVIEW_CACHE.get(period_days)
         if cached and time.monotonic()-cached[0]<_OVERVIEW_CACHE_TTL_SECONDS: return cached[1]
@@ -144,9 +160,9 @@ def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:
 def executive_transactions(
     limit:int=Query(default=50,ge=1,le=100),offset:int=Query(default=0,ge=0),
     transaction_type:str|None=Query(default=None),category:str|None=Query(default=None),
-    x_api_key:str|None=Header(default=None)
+    x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
 ):
-    authorize(x_api_key)
+    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     allowed_types={"Debit","Credit"}
     allowed_categories={"Groceries","Travel","Luxury","Utilities","Salary","ATM","Transfers"}
     if transaction_type and transaction_type not in allowed_types: raise HTTPException(422,"Unsupported transaction type")
@@ -163,6 +179,64 @@ def executive_transactions(
     except Exception as exc:
         log.exception("Executive transaction retrieval failed")
         raise HTTPException(500,"Unable to retrieve transaction activity") from exc
+
+
+@app.get("/api/v1/analytics/overview")
+def analytics_overview(
+    start_date:date|None=None,end_date:date|None=None,
+    period_days:int=Query(default=90,ge=1,le=730),
+    interval:str=Query(default="day",pattern="^(day|week|month)$"),
+    dimension:str=Query(default="none",pattern="^(none|category|channel|account_tier|behavior_segment)$"),
+    save_snapshot:bool=False,
+    x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
+):
+    staff=authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    try:
+        today=datetime.now(timezone.utc).date()
+        end_day=end_date or today
+        start_day=start_date or (end_day-timedelta(days=period_days-1))
+        if end_day<start_day: raise HTTPException(422,"end_date must not be before start_date")
+        start=datetime.combine(start_day,datetime.min.time(),tzinfo=timezone.utc)
+        end=datetime.combine(end_day+timedelta(days=1),datetime.min.time(),tzinfo=timezone.utc)
+        db=get_database()
+        result=db.rpc("analytics_period_summary",{
+            "p_start":start.isoformat(),"p_end":end.isoformat(),
+            "p_interval":interval,"p_dimension":dimension
+        }).execute().data
+        if isinstance(result,list) and result: result=result[0]
+        if not isinstance(result,dict): raise HTTPException(500,"Analytics aggregation returned an invalid result")
+        if save_snapshot:
+            snapshot={
+                "period_start":start_day.isoformat(),"period_end":end_day.isoformat(),
+                "aggregation_interval":interval,"dimension":dimension,
+                "metrics":result,"model_version":"rules-v1","data_cutoff_at":datetime.now(timezone.utc).isoformat(),
+                "scheduled_run_key":f"manual:{start_day}:{end_day}:{interval}:{dimension}:{datetime.now(timezone.utc).date()}",
+                "created_by":str(staff.id)
+            }
+            try:
+                db.table("executive_analytics_snapshots").insert(snapshot).execute()
+            except Exception:
+                # A unique scheduled_run_key prevents duplicate daily snapshots.
+                log.info("Analytics snapshot already exists for this period and run key")
+        return result
+    except HTTPException: raise
+    except Exception as exc:
+        log.exception("Date-range analytics aggregation failed")
+        raise HTTPException(500,"Unable to calculate date-range analytics") from exc
+
+
+@app.get("/api/v1/analytics/snapshots")
+def analytics_snapshots(
+    page:int=Query(default=1,ge=1),page_size:int=Query(default=25,ge=1,le=100),
+    x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
+):
+    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    try:
+        result=get_database().table("executive_analytics_snapshots").select("*",count="exact").order("generated_at",desc=True).range((page-1)*page_size,page*page_size-1).execute()
+        return {"snapshots":result.data or [],"total":result.count or 0,"page":page,"page_size":page_size}
+    except Exception as exc:
+        log.exception("Analytics snapshot retrieval failed")
+        raise HTTPException(500,"Unable to retrieve analytics snapshots") from exc
 
 @app.post("/api/v1/admin/seed-and-run-demo")
 def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
@@ -183,8 +257,8 @@ def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
 # Internal compatibility endpoints retained for existing integrations; the executive
 # web application intentionally does not expose customer portfolio or individual profiles.
 @app.get("/api/v1/customers")
-def list_customers(x_api_key: str|None=Header(default=None)):
-    authorize(x_api_key)
+def list_customers(x_api_key: str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    authorize_staff(x_api_key,authorization)
     try:
         db=get_database()
         customers=(db.table("customers").select("customer_id,full_name,email,account_tier,created_at").order("full_name").range(0,999).execute().data or [])
@@ -198,8 +272,8 @@ def list_customers(x_api_key: str|None=Header(default=None)):
         raise HTTPException(500,"Unable to retrieve customer data") from exc
 
 @app.get("/api/v1/explain/{customer_id}")
-def explain(customer_id:str,x_api_key:str|None=Header(default=None)):
-    authorize(x_api_key)
+def explain(customer_id:str,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    authorize_staff(x_api_key,authorization)
     try:
         result=explain_customer(customer_id)
         if result is None: raise HTTPException(404,"Customer not found")
@@ -208,3 +282,12 @@ def explain(customer_id:str,x_api_key:str|None=Header(default=None)):
     except Exception as exc:
         log.exception("Internal customer explanation failed")
         raise HTTPException(500,"Unable to retrieve explanation") from exc
+
+
+from crm_api import router as crm_router
+app.include_router(crm_router)
+
+from management_api import router as management_router
+from settings_api import router as settings_router
+app.include_router(management_router)
+app.include_router(settings_router)

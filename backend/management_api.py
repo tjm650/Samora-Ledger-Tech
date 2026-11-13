@@ -51,7 +51,9 @@ def generate_report(payload: ReportRequest, x_api_key: str | None = Header(defau
             from collections import Counter
             content={"account_tier_distribution":dict(Counter(x["account_tier"] for x in customers)),"behavioral_segments":dict(Counter(x.get("behavior_segment") or "unclassified" for x in features))}
         elif payload.report_key=="risk_drivers":
-            content={"risk_metrics":overview["risk_metrics"]}
+            from collections import Counter
+            drivers=db.table("predictive_insights").select("primary_churn_driver").range(0,9999).execute().data or []
+            content={"risk_metrics":overview["risk_metrics"],"risk_drivers":[{"driver":name,"customers":count} for name,count in Counter(x.get("primary_churn_driver") or "Not classified" for x in drivers).most_common()]}
         else:
             content={"metrics":overview["metrics"],"risk_metrics":overview["risk_metrics"],"transaction_trend":overview["transaction_trend"]}
         definitions=db.table("report_definitions").select("report_definition_id").eq("report_key",payload.report_key).maybe_single().execute().data or {}

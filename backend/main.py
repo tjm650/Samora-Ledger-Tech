@@ -21,6 +21,22 @@ def authorize(x_api_key: str|None):
     if not expected: raise HTTPException(503,"API_KEY is not configured")
     if not x_api_key or not secrets.compare_digest(x_api_key,expected): raise HTTPException(401,"Invalid API key")
 
+def authorize_staff(x_api_key: str|None, authorization: str|None, allowed_roles=None):
+    authorize(x_api_key)
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401,"Staff sign-in required")
+    token=authorization.split(" ",1)[1].strip()
+    if not token: raise HTTPException(401,"Staff sign-in required")
+    try:
+        user=get_database().auth.get_user(token).user
+    except Exception as exc:
+        raise HTTPException(401,"Staff session is invalid or expired") from exc
+    if not user: raise HTTPException(401,"Staff session is invalid or expired")
+    role=(getattr(user,"app_metadata",None) or {}).get("role")
+    allowed=allowed_roles or {"admin","analyst","relationship_manager","executive"}
+    if role not in allowed: raise HTTPException(403,"Your staff role is not authorised")
+    return user
+
 def get_database():
     from supabase import create_client
     url=os.getenv("SUPABASE_URL"); key=os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -124,8 +140,8 @@ def pipeline(x_api_key: str|None=Header(default=None)):
         raise HTTPException(500,"Pipeline failed; inspect service logs") from exc
 
 @app.get("/api/v1/executive/overview")
-def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:str|None=Header(default=None)):
-    authorize(x_api_key)
+def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     try:
         cached=_OVERVIEW_CACHE.get(period_days)
         if cached and time.monotonic()-cached[0]<_OVERVIEW_CACHE_TTL_SECONDS: return cached[1]
@@ -144,9 +160,9 @@ def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:
 def executive_transactions(
     limit:int=Query(default=50,ge=1,le=100),offset:int=Query(default=0,ge=0),
     transaction_type:str|None=Query(default=None),category:str|None=Query(default=None),
-    x_api_key:str|None=Header(default=None)
+    x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
 ):
-    authorize(x_api_key)
+    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     allowed_types={"Debit","Credit"}
     allowed_categories={"Groceries","Travel","Luxury","Utilities","Salary","ATM","Transfers"}
     if transaction_type and transaction_type not in allowed_types: raise HTTPException(422,"Unsupported transaction type")
@@ -183,8 +199,8 @@ def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
 # Internal compatibility endpoints retained for existing integrations; the executive
 # web application intentionally does not expose customer portfolio or individual profiles.
 @app.get("/api/v1/customers")
-def list_customers(x_api_key: str|None=Header(default=None)):
-    authorize(x_api_key)
+def list_customers(x_api_key: str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    authorize_staff(x_api_key,authorization)
     try:
         db=get_database()
         customers=(db.table("customers").select("customer_id,full_name,email,account_tier,created_at").order("full_name").range(0,999).execute().data or [])
@@ -198,8 +214,8 @@ def list_customers(x_api_key: str|None=Header(default=None)):
         raise HTTPException(500,"Unable to retrieve customer data") from exc
 
 @app.get("/api/v1/explain/{customer_id}")
-def explain(customer_id:str,x_api_key:str|None=Header(default=None)):
-    authorize(x_api_key)
+def explain(customer_id:str,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    authorize_staff(x_api_key,authorization)
     try:
         result=explain_customer(customer_id)
         if result is None: raise HTTPException(404,"Customer not found")
@@ -208,3 +224,7 @@ def explain(customer_id:str,x_api_key:str|None=Header(default=None)):
     except Exception as exc:
         log.exception("Internal customer explanation failed")
         raise HTTPException(500,"Unable to retrieve explanation") from exc
+
+
+from crm_api import router as crm_router
+app.include_router(crm_router)

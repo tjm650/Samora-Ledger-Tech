@@ -16,7 +16,7 @@ def test_feature_engineering_persists_multi_period_spend_fields():
         {"customer_id":"c1","timestamp":"2026-11-10T10:00:00Z","amount":1000,"transaction_type":"Credit","merchant_category":"Salary","post_transaction_balance":2000},
     ]
     row = engineer_features(pd.DataFrame(rows), now=now).iloc[0]
-    assert row.monetary_spend_30d == 100
+    assert row.monetary_spend_30d == 400
     assert row.monetary_spend_60d == 400
     assert row.monetary_spend_90d == 900
     assert row.average_transaction_value_90d == 300

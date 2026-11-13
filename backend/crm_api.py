@@ -41,7 +41,17 @@ def _staff(x_api_key: str | None, authorization: str | None, roles=CRM_ROLES):
     role = metadata.get("role")
     if role not in roles:
         raise HTTPException(403, "Your staff role is not permitted to perform this action")
-    return {"user_id": str(user.id), "role": role, "email": getattr(user, "email", None)}
+    actor={"user_id":str(user.id),"role":role,"email":getattr(user,"email",None)}
+    try:
+        _db().table("staff_profiles").upsert({
+            "user_id":actor["user_id"],"email":actor["email"],
+            "display_name":(getattr(user,"user_metadata",None) or {}).get("full_name"),
+            "role":role,"is_active":True
+        },on_conflict="user_id").execute()
+    except Exception as exc:
+        log.exception("Staff profile synchronisation failed")
+        raise HTTPException(503,"Staff profile is not provisioned in the database") from exc
+    return actor
 
 class InteractionCreate(BaseModel):
     interaction_type: Literal["call", "email", "meeting", "branch_visit", "message", "other"]

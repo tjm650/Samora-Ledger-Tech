@@ -4,7 +4,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {useEffect,useRef,useState} from "react";
 import {
- Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,
+ Building2,LayoutDashboard,ArrowLeftRight,ShieldAlert,BarChart3,FileText,Scale,Users,
  PanelLeftClose,PanelLeftOpen,Menu,X,HelpCircle,Settings,UserRound,ChevronDown
 } from "lucide-react";
 
@@ -12,7 +12,7 @@ const groups=[
  {label:"Overview",items:[
   {href:"/",label:"Executive overview",icon:LayoutDashboard}
  ]},
- {label:"Transaction Management",items:[
+ {label:"Customer Management",items:[\n  {href:"/crm",label:"Customer relationship management",icon:Users}\n ]},\n {label:"Transaction Management",items:[
   {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight}
  ]},
  {label:"Risk & Controls",items:[

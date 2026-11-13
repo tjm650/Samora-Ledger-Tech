@@ -309,3 +309,42 @@ def customer_risk_history(customer_id: UUID, page: int = Query(1, ge=1), page_si
     except Exception as exc:
         log.exception("Customer risk history retrieval failed")
         raise HTTPException(500, "Unable to retrieve customer risk history") from exc
+
+
+class RiskThresholdUpdate(BaseModel):
+    low_max: float = Field(ge=0, lt=100)
+    moderate_max: float = Field(gt=0, le=100)
+    significant_movement: float = Field(gt=0, le=100)
+
+@router.get("/risk/thresholds")
+def get_risk_thresholds(x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    try:
+        rows = _db().table("risk_thresholds").select("*").order("name").execute().data or []
+        return {"thresholds": rows}
+    except Exception as exc:
+        log.exception("Risk threshold retrieval failed")
+        raise HTTPException(500, "Unable to retrieve risk thresholds") from exc
+
+@router.patch("/risk/thresholds/{threshold_id}")
+def update_risk_thresholds(threshold_id: UUID, payload: RiskThresholdUpdate, x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+    actor = _staff(x_api_key, authorization, {"admin"})
+    if payload.moderate_max <= payload.low_max:
+        raise HTTPException(422, "moderate_max must be greater than low_max")
+    try:
+        db = _db()
+        old = db.table("risk_thresholds").select("*").eq("threshold_id", str(threshold_id)).maybe_single().execute().data
+        if not old: raise HTTPException(404, "Risk threshold configuration not found")
+        changes = {**payload.model_dump(), "configured_by": actor["user_id"], "updated_at": datetime.now(timezone.utc).isoformat()}
+        result = db.table("risk_thresholds").update(changes).eq("threshold_id", str(threshold_id)).execute().data
+        saved = result[0] if result else {**old, **changes}
+        db.table("model_audit_logs").insert({
+            "actor_user_id": actor["user_id"], "action": "risk_thresholds_updated",
+            "entity_type": "risk_threshold", "entity_id": str(threshold_id),
+            "before_state": old, "after_state": saved
+        }).execute()
+        return saved
+    except HTTPException: raise
+    except Exception as exc:
+        log.exception("Risk threshold update failed")
+        raise HTTPException(500, "Unable to update risk thresholds") from exc

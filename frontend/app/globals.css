@@ -688,3 +688,85 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
   display:flex;
  }
 }
+
+
+/* Smoothly reveal sidebar labels while the icon rail expands */
+@media (min-width:761px) {
+ .workspace-sidebar.collapsed .sidebar-section-label,
+ .workspace-sidebar.collapsed .sidebar-group-title,
+ .workspace-sidebar.collapsed .sidebar-link span,
+ .workspace-sidebar.collapsed .sidebar-user-copy {
+  display:block;
+  opacity:0;
+  visibility:hidden;
+  transform:translateX(-7px);
+  transition:
+   opacity .18s ease,
+   transform .22s ease,
+   visibility 0s linear .22s;
+ }
+ .workspace-sidebar.collapsed .sidebar-group-title {
+  max-height:0;
+  overflow:hidden;
+  margin-top:0;
+  margin-bottom:0;
+  line-height:14px;
+  transition:
+   max-height .22s ease,
+   margin .22s ease,
+   opacity .18s ease,
+   transform .22s ease,
+   visibility 0s linear .22s;
+ }
+ .workspace-sidebar.collapsed .sidebar-link span {
+  max-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+ }
+ .workspace-sidebar.collapsed .sidebar-user-copy {
+  max-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-section-label,
+ .workspace-sidebar.collapsed:hover .sidebar-group-title,
+ .workspace-sidebar.collapsed:hover .sidebar-link span,
+ .workspace-sidebar.collapsed:hover .sidebar-user-copy,
+ .workspace-sidebar.collapsed:focus-within .sidebar-section-label,
+ .workspace-sidebar.collapsed:focus-within .sidebar-group-title,
+ .workspace-sidebar.collapsed:focus-within .sidebar-link span,
+ .workspace-sidebar.collapsed:focus-within .sidebar-user-copy {
+  opacity:1;
+  visibility:visible;
+  transform:translateX(0);
+  transition:
+   opacity .2s ease .04s,
+   transform .22s ease .02s,
+   visibility 0s;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-group-title,
+ .workspace-sidebar.collapsed:focus-within .sidebar-group-title {
+  max-height:20px;
+  margin-bottom:6px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-link span,
+ .workspace-sidebar.collapsed:focus-within .sidebar-link span {
+  max-width:150px;
+ }
+ .workspace-sidebar.collapsed:hover .sidebar-user-copy,
+ .workspace-sidebar.collapsed:focus-within .sidebar-user-copy {
+  max-width:150px;
+ }
+ .workspace-sidebar.collapsed .sidebar-nav {
+  transition:gap .22s ease;
+ }
+}
+@media (prefers-reduced-motion:reduce) {
+ .workspace-sidebar.collapsed,
+ .workspace-sidebar.collapsed *,
+ .workspace-sidebar.collapsed *::before,
+ .workspace-sidebar.collapsed *::after {
+  transition-duration:.01ms!important;
+  animation-duration:.01ms!important;
+ }
+}

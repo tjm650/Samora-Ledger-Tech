@@ -2,32 +2,59 @@
 Enterprise Banking Transaction Analytics & Executive Decision-Support MVP.
 
 ## Source layout
-- `database/schema.sql` — Supabase PostgreSQL tables, constraints, indexes and RLS.
-- `backend/` — Python 3.11 FastAPI service, synthetic data seeder and analytics pipeline.
-- `frontend/` — Next.js App Router executive workspace: overview, transaction activity, risk and exposure, analytics and trends, management reports, and model governance. The website is designed for banking executive staff and does not expose a CRM or customer portfolio interface.
+- `database/schema.sql` — original Supabase core schema.
+- `supabase/migrations/` — additive, version-controlled enterprise schema migrations.
+- `backend/` — Python 3.11 FastAPI service, feature engineering, transparent churn scoring, CRM workflow, risk monitoring, management reports, governance and settings APIs.
+- `frontend/` — Next.js App Router executive workspace: overview, transactions, risk, analytics, reports, governance, CRM, customer profiles and settings.
 - `render.yaml` — Render deployment blueprint.
-- `.github/workflows/ci.yml` — backend tests and frontend type-check workflow.
+
+## Existing data and safe migrations
+The original populated tables remain intact: `customers`, `transactions`, `customer_features` and `predictive_insights`. Enterprise functionality is added through non-destructive migrations; no existing customer or transaction rows are recreated.
+
+Migrations currently include:
+- `20261113130000_enterprise_crm_risk_reporting_governance.sql`
+- `20261113140000_harden_enterprise_rls_and_indexes.sql`
+- `20261113150000_use_configured_risk_thresholds.sql`
+
+The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 
 ## Local setup
-1. Create a disposable Supabase project and apply `database/schema.sql` in the SQL editor.
-2. Copy `backend/.env.example` to `backend/.env`, set the project URL and service-role key. Never expose the service-role key to the browser.
-3. From `backend`: `python -m venv .venv && pip install -r requirements.txt`; run `ALLOW_DEMO_SEEDING=true python data_seeder.py` only on a disposable demo database; start API with `uvicorn main:app --reload`.
-4. Copy `frontend/.env.example` to `frontend/.env.local`, set `SAMORA_API_URL` to the Render service base URL and `SAMORA_API_KEY` to the Render `API_KEY` value, then from `frontend`: `npm install && npm run dev`. Keep both Render variables server-side (never prefix them with `NEXT_PUBLIC_`). Also configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for the executive staff sign-in flow.
-5. Configure `API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and allowed CORS origins in Render. In Vercel, set root directory to `frontend`; configure server-side `SAMORA_API_URL` and `SAMORA_API_KEY` with the Render service URL and Render `API_KEY` value; and configure `NEXT_PUBLIC_SUPABASE_URL` plus `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for staff sign-in. Never expose the Render API key or Supabase service-role key in browser variables.
-6. Create staff accounts through the trusted Supabase Auth administration process and assign an approved `app_metadata.role`: `executive`, `admin`, `analyst`, or `relationship_manager`. The website has no public registration. Role metadata must be assigned by a trusted administrator, never through user-editable metadata.
+1. Create a Supabase project and apply `database/schema.sql`, followed by the timestamped migrations in `supabase/migrations/`.
+2. Copy `backend/.env.example` to `backend/.env`, set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `API_KEY`. Never expose the service-role key to the browser.
+3. From `backend`: `python -m venv .venv && pip install -r requirements.txt`; start the API with `uvicorn main:app --reload`.
+4. Copy `frontend/.env.example` to `frontend/.env.local`. Set server-side `SAMORA_API_URL` and `SAMORA_API_KEY`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Run `npm install && npm run dev` from `frontend`.
+5. Configure Render with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `API_KEY`, and `API_CORS_ORIGINS`. Configure Vercel with the two server-side Samora variables and the two public Supabase Auth variables. Do not prefix server secrets with `NEXT_PUBLIC_`.
+6. Provision staff accounts through the trusted Supabase Auth administration process. Assign approved `app_metadata.role` values: `executive`, `admin`, `analyst`, or `relationship_manager`. The frontend has no public registration. Never grant roles through user-editable metadata.
 
-## API
+## API surface
+All protected backend APIs require the private `X-API-Key` header and a verified Supabase staff JWT in `Authorization: Bearer <token>`. The health endpoint is public. Pipeline execution is restricted to the trusted server-side proxy/API key.
+
 - `GET /health`
-- `GET /api/v1/executive/overview?period_days=90` with `X-API-Key` — aggregated executive metrics and trends.
-- `GET /api/v1/executive/transactions?limit=50&offset=0` with `X-API-Key` — paginated ledger activity.
-- `POST /api/v1/run-pipeline` with `X-API-Key`.
-- `GET /api/v1/customers` and `GET /api/v1/explain/{customer_id}` remain internal compatibility endpoints and are not exposed in the executive website.
+- `GET /api/v1/executive/overview`
+- `GET /api/v1/executive/transactions`
+- `GET /api/v1/analytics/overview` — custom date range, daily/weekly/monthly aggregation, previous-period comparison, category/channel/account-tier/behaviour-segment dimensions.
+- `GET /api/v1/analytics/snapshots`
+- `GET /api/v1/crm/customers` — search, filters, sorting and pagination.
+- `GET /api/v1/crm/customers/{customer_id}` — consolidated profile and spending metrics.
+- `GET|POST /api/v1/crm/customers/{customer_id}/interactions`
+- `GET|POST /api/v1/crm/tasks`, `PATCH /api/v1/crm/tasks/{task_id}`
+- `GET /api/v1/crm/customers/{customer_id}/tasks`
+- `GET /api/v1/risk/summary`, `/trends`, `/alerts`, `/thresholds`
+- `GET|POST /api/v1/reports`, `GET /api/v1/reports/{report_id}`, `GET /api/v1/reports/{report_id}/download?format=csv`
+- `GET /api/v1/governance/models`, `/runs`, `/configuration`, `/audit-logs`
+- `GET /api/v1/settings/me`, `/preferences`, `/organisation`
 
-## Executive access and security
-The Next.js workspace uses Supabase Auth cookie sessions and checks trusted `app_metadata.role` claims on both page requests and API routes. Only approved staff roles can access the workspace. Server-side Render API credentials remain private. The API proxy uses the Render service's service-role access only after verifying an authenticated, authorised staff identity.
+The legacy `GET /api/v1/customers` and `GET /api/v1/explain/{customer_id}` routes remain as authenticated compatibility endpoints.
 
-## Important model and security limitations
-This MVP uses transparent rule-based risk scoring rather than a trained production classifier. It does not estimate revenue-at-risk because account margin/revenue data is not part of the requested schema. Explanations are not SHAP values. Synthetic cohort patterns are not validated churn labels. Before real use, replace the scoring baseline with outcome-labelled temporal model training, calibration, independent validation, fairness and drift testing, governance, access review and human oversight. Product offers require suitability, eligibility and consent controls. Restrict staff roles through trusted Supabase `app_metadata`; never grant those roles from user-editable metadata. Seeder is demo-only and must never run against production customer data.
+## Security and roles
+The Next.js workspace requires Supabase Auth sessions and trusted `app_metadata.role` claims. Backend routes independently validate the staff JWT and role before using the server-side service-role database client. New enterprise tables have RLS enabled, are not granted to anon/authenticated Data API roles, and have explicit service-role policies. The staff profile table permits authenticated users to read only their own profile.
+
+The CRM directory and customer profiles are confidential staff functionality. Executive aggregate analytics omit customer-level information. The Supabase service-role key and Render API key are server-only.
+
+## Model and data limitations
+The MVP uses a transparent rules-based churn-risk baseline, not a trained production classifier. It is not credit risk or probability of default. Explanations are not SHAP. No model accuracy, precision, recall or AUC is reported because there is no labelled churn-outcome dataset. Feature/risk history and model run records are written on future pipeline runs; no historical records are fabricated retroactively.
+
+The existing demo dataset is synthetic. Product offers are not validated suitability decisions. Currency values are not FX-normalised. Branch and geographic analytics are not exposed because those source dimensions do not exist. CSV management report export is supported; PDF export is not yet implemented.
 
 ## Validation
-CI installs backend dependencies and compiles the Python service; frontend CI runs TypeScript type-check. Live Supabase, Render and Vercel deployment require your project credentials and are not performed by a repository commit.
+CI compiles the Python backend, runs backend tests and runs the frontend TypeScript type-check. Live Render/Vercel deployment verification is tracked separately from source commits. The demo seeder is one-shot and must only be used against an empty disposable demo database.

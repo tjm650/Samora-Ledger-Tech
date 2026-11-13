@@ -611,3 +611,12 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
 @media(min-width:761px){
  .workspace-sidebar.collapsed{width:76px!important;min-width:76px;max-width:76px;padding-left:10px;padding-right:10px}
 }
+
+
+/* Churn risk driver ranking */
+.risk-driver-list{display:flex;flex-direction:column;gap:15px;padding:8px 2px 4px}
+.risk-driver-row{display:flex;flex-direction:column;gap:7px}
+.risk-driver-label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#526276;font-size:12px}
+.risk-driver-label strong{color:#0b1d34;font-variant-numeric:tabular-nums}
+.risk-driver-track{height:7px;overflow:hidden;border-radius:99px;background:#edf1f5}
+.risk-driver-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0b1d34,#f4b335)}

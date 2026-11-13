@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging, os, secrets, time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from collections import Counter, defaultdict
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Query
@@ -179,6 +179,50 @@ def executive_transactions(
     except Exception as exc:
         log.exception("Executive transaction retrieval failed")
         raise HTTPException(500,"Unable to retrieve transaction activity") from exc
+
+
+@app.get("/api/v1/analytics/overview")
+def analytics_overview(
+    start_date:date|None=None,end_date:date|None=None,
+    period_days:int=Query(default=90,ge=1,le=730),
+    interval:str=Query(default="day",pattern="^(day|week|month)$"),
+    dimension:str=Query(default="none",pattern="^(none|category|channel|account_tier|behavior_segment)$"),
+    save_snapshot:bool=False,
+    x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
+):
+    staff=authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    try:
+        today=datetime.now(timezone.utc).date()
+        end_day=end_date or today
+        start_day=start_date or (end_day-timedelta(days=period_days-1))
+        if end_day<start_day: raise HTTPException(422,"end_date must not be before start_date")
+        start=datetime.combine(start_day,datetime.min.time(),tzinfo=timezone.utc)
+        end=datetime.combine(end_day+timedelta(days=1),datetime.min.time(),tzinfo=timezone.utc)
+        db=get_database()
+        result=db.rpc("analytics_period_summary",{
+            "p_start":start.isoformat(),"p_end":end.isoformat(),
+            "p_interval":interval,"p_dimension":dimension
+        }).execute().data
+        if isinstance(result,list) and result: result=result[0]
+        if not isinstance(result,dict): raise HTTPException(500,"Analytics aggregation returned an invalid result")
+        if save_snapshot:
+            snapshot={
+                "period_start":start_day.isoformat(),"period_end":end_day.isoformat(),
+                "aggregation_interval":interval,"dimension":dimension,
+                "metrics":result,"model_version":"rules-v1","data_cutoff_at":datetime.now(timezone.utc).isoformat(),
+                "scheduled_run_key":f"manual:{start_day}:{end_day}:{interval}:{dimension}:{datetime.now(timezone.utc).date()}",
+                "created_by":str(staff.id)
+            }
+            try:
+                db.table("executive_analytics_snapshots").insert(snapshot).execute()
+            except Exception:
+                # A unique scheduled_run_key prevents duplicate daily snapshots.
+                log.info("Analytics snapshot already exists for this period and run key")
+        return result
+    except HTTPException: raise
+    except Exception as exc:
+        log.exception("Date-range analytics aggregation failed")
+        raise HTTPException(500,"Unable to calculate date-range analytics") from exc
 
 @app.post("/api/v1/admin/seed-and-run-demo")
 def seed_and_run_demo(x_api_key: str|None=Header(default=None)):

@@ -179,3 +179,32 @@ def run_growth_intelligence(x_api_key:str|None=Header(default=None),authorizatio
     ]
     db.table("business_insights").upsert(insight_rows,on_conflict="insight_key,generated_by").execute()
     return {"customers_processed":len(customers),"value_scores_written":len(score_rows),"recommendations_written":len(rec_rows),"insights_written":len(insight_rows),"value_distribution":dict(bands),"profitability_measured":False,"method":"transparent relative scoring and rules-based product propensity; not a trained ML model"}
+
+class AssistantQuestion(BaseModel):
+    question:str=Field(min_length=8,max_length=1200)
+
+@router.post("/assistant")
+def business_intelligence_assistant(payload:AssistantQuestion,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
+    _staff(x_api_key,authorization,True)
+    import json, os, urllib.error, urllib.request
+    api_key=os.getenv("OPENAI_API_KEY")
+    if not api_key: raise HTTPException(503,"AI assistant is not configured. Add OPENAI_API_KEY to the Render service environment.")
+    db=get_database()
+    customers=db.table("customers").select("customer_id",count="exact").execute()
+    values=db.table("customer_value_scores").select("value_band,value_score").eq("assessment_date",date.today().isoformat()).execute().data or []
+    risks=db.table("predictive_insights").select("churn_risk_score,primary_churn_driver").execute().data or []
+    recs=db.table("product_recommendations").select("recommendation_type,status,priority").in_("status",["suggested","presented","accepted","converted"]).execute().data or []
+    insights=db.table("business_insights").select("title,summary,recommended_action").eq("is_active",True).limit(20).execute().data or []
+    context={"customer_count":customers.count or 0,"value_band_counts":{b:sum(1 for v in values if v["value_band"]==b) for b in ["emerging","core","high_value","top_value"]},"rules_based_churn_risk":{"assessed":len(risks),"high":sum(1 for x in risks if float(x["churn_risk_score"])>=60),"top_drivers":dict(__import__("collections").Counter(x.get("primary_churn_driver") or "Unclassified" for x in risks).most_common(5))},"product_opportunities":{"total":len(recs),"cross_sell":sum(1 for x in recs if x["recommendation_type"]=="cross_sell"),"up_sell":sum(1 for x in recs if x["recommendation_type"]=="up_sell"),"high_priority":sum(1 for x in recs if x["priority"]=="high")},"latest_insights":insights}
+    model=os.getenv("OPENAI_MODEL","gpt-4o-mini")
+    body={"model":model,"temperature":0.2,"messages":[{"role":"system","content":"You are Samora Ledger Tech's banking business intelligence assistant. Answer only from the supplied aggregate portfolio context. Never invent metrics, customer facts, product terms, eligibility or profitability. Clearly distinguish observed facts from hypotheses. Churn scores are rules-based indicators, not validated probabilities. Customer value is relative, not bank profitability. Product recommendations require human suitability, consent and eligibility checks. If the context does not contain enough information, say so and identify the missing data. Give concise, actionable executive analysis."},{"role":"user","content":"Portfolio context (aggregate only): "+json.dumps(context)+"\n\nQuestion: "+payload.question}]}
+    request=urllib.request.Request("https://api.openai.com/v1/chat/completions",data=json.dumps(body).encode(),headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"},method="POST")
+    try:
+        with urllib.request.urlopen(request,timeout=35) as response: result=json.loads(response.read().decode())
+        answer=result["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as exc:
+        detail=exc.read().decode(errors="ignore")[:500]
+        raise HTTPException(502,"AI provider request failed: "+detail) from exc
+    except Exception as exc:
+        raise HTTPException(502,"Unable to generate an AI business insight") from exc
+    return {"answer":answer,"model":model,"context_scope":"aggregate portfolio data only","generated_at":datetime.now(timezone.utc).isoformat()}

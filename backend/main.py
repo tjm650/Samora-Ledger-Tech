@@ -10,7 +10,7 @@ from data_seeder import seed as seed_demo_data
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO"))
 log=logging.getLogger("samora")
-app=FastAPI(title="Samora Ledger Tech API",version="1.1.0")
+app=FastAPI(title="Samora Ledger Tech API",version="1.2.0")
 _OVERVIEW_CACHE:dict[int,tuple[float,dict]]={}
 _OVERVIEW_CACHE_TTL_SECONDS=30
 origins=[x.strip() for x in os.getenv("API_CORS_ORIGINS","http://localhost:3000").split(",") if x.strip()]
@@ -298,3 +298,6 @@ from management_api import router as management_router
 from settings_api import router as settings_router
 app.include_router(management_router)
 app.include_router(settings_router)
+
+from growth_api import router as growth_router
+app.include_router(growth_router)

@@ -24,6 +24,7 @@ Migrations currently include:
 - `20261113123927_aggregate_risk_history_trends.sql`
 - `20261113124048_backfill_existing_feature_and_risk_baselines.sql`
 - `20261113124150_risk_score_movements.sql`
+- `20261113124328_align_feature_average_transaction_value.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 

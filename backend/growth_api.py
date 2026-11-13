@@ -147,6 +147,8 @@ def run_growth_intelligence(x_api_key:str|None=Header(default=None),authorizatio
     max_spend=max([m["spend"] for m in metrics] or [1]) or 1; max_balance=max([m["balance"] for m in metrics] or [1]) or 1
     max_freq=max([m["frequency"] for m in metrics] or [1]) or 1; max_age=max([m["age"] for m in metrics] or [1]) or 1
     score_rows=[]; rec_rows=[]
+    existing_recs=_rows(db,"product_recommendations","customer_id,product_id,recommendation_type,status")
+    existing_status={(x["customer_id"],x["product_id"],x["recommendation_type"]):x["status"] for x in existing_recs}
     product_by_code={p["product_code"]:p for p in products}
     for m in metrics:
         c=m["customer"]; cid=c["customer_id"]; a=m["activity"]
@@ -157,8 +159,10 @@ def run_growth_intelligence(x_api_key:str|None=Header(default=None),authorizatio
         candidates=[]
         def add(code,kind,score_value,reason,evidence):
             p=product_by_code.get(code)
-            if p and p["product_id"] not in owned_map[cid]:
-                candidates.append({"customer_id":cid,"product_id":p["product_id"],"recommendation_type":kind,"propensity_score":round(min(99,max(1,score_value)),2),"priority":"high" if score_value>=75 else ("medium" if score_value>=45 else "low"),"rationale":reason,"evidence":evidence,"status":"suggested","generated_at":datetime.now(timezone.utc).isoformat()})
+            key=(cid,p["product_id"],kind) if p else None
+            previous_status=existing_status.get(key) if key else None
+            if p and p["product_id"] not in owned_map[cid] and previous_status not in {"accepted","declined","converted","dismissed"}:
+                candidates.append({"customer_id":cid,"product_id":p["product_id"],"recommendation_type":kind,"propensity_score":round(min(99,max(1,score_value)),2),"priority":"high" if score_value>=75 else ("medium" if score_value>=45 else "low"),"rationale":reason,"evidence":evidence,"status":previous_status or "suggested","generated_at":datetime.now(timezone.utc).isoformat()})
         if m["balance"]>=2500 or a["salary"]>0:add("SAVINGS_PLUS","cross_sell",45+min(35,m["balance"]/500),"Regular inflows or maintained balances suggest a savings conversation may be relevant.",{"average_balance_30d":m["balance"],"salary_credits_90d":a["salary"]})
         if m["balance"]>=5000 and c.get("account_tier")!="Platinum":add("PREMIUM_BANKING","up_sell" if c.get("account_tier") in {"Standard","Gold"} else "cross_sell",55+min(35,m["balance"]/1000),"Sustained average balance may justify a review of premium banking benefits and fees.",{"average_balance_30d":m["balance"],"current_tier":c.get("account_tier")})
         if m["balance"]>=8000:add("INVESTMENT_SERVICES","cross_sell",50+min(40,m["balance"]/1000),"Balance profile may support a suitability-led investment discussion; risk appetite must be assessed.",{"average_balance_30d":m["balance"]})

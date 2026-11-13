@@ -35,15 +35,6 @@ def generate_report(payload: ReportRequest, x_api_key: str | None = Header(defau
         db = _db()
         start = datetime.combine(payload.period_start, datetime.min.time(), tzinfo=timezone.utc)
         end = datetime.combine(payload.period_end + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
-        rows=[]; offset=0; size=1000
-        while True:
-            page=(db.table("transactions")
-                  .select("transaction_id,timestamp,amount,transaction_type,merchant_category,channel,post_transaction_balance")
-                  .gte("timestamp",start.isoformat()).lt("timestamp",end.isoformat())
-                  .order("timestamp").range(offset,offset+size-1).execute().data or [])
-            rows.extend(page)
-            if len(page)<size: break
-            offset+=size
         overview=db.rpc("analytics_period_summary",{
             "p_start":start.isoformat(),"p_end":end.isoformat(),
             "p_interval":"day","p_dimension":"none"

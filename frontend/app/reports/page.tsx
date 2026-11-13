@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import HeaderActions from "@/app/components/header-actions";
 import {Download,Printer,FileBarChart,Calendar} from "lucide-react";
 import {amount,getExecutiveOverview,number,type ExecutiveOverview} from "@/lib/executive";
 export default function ReportsPage(){
@@ -8,7 +9,7 @@ export default function ReportsPage(){
  function exportCsv(){if(!data)return;const rows=[["Samora Ledger Tech","Executive management summary"],["Generated at",data.generated_at],["Reporting period","Latest 90 days"],[],["Indicator","Value"],["Transactions (30 days)",data.metrics.transactions_30d],["Debit volume (30 days)",data.metrics.debit_volume_30d],["Credit volume (30 days)",data.metrics.credit_volume_30d],["Net transaction flow (30 days)",data.metrics.net_flow_30d],["Average transaction (30 days)",data.metrics.average_transaction_30d],["High-risk relationships",data.metrics.high_risk_relationships],["High-risk share (%)",data.metrics.high_risk_share_pct],["Average risk score",data.metrics.average_risk_score],["Relationships evaluated",data.metrics.evaluated_relationships],[],["Risk band","Count"],...data.risk_distribution.map(x=>[x.name,x.count]),[],["Primary risk driver","Count"],...data.risk_drivers.map(x=>[x.name,x.count]),[],["Transaction category","Count","Volume"],...data.category_breakdown.map(x=>[x.name,x.count,x.volume])];const csv=rows.map(row=>row.map(x=>JSON.stringify(x??"")).join(",")).join("\n");const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="samora-executive-management-summary.csv";a.click();URL.revokeObjectURL(url)}
  const m=data?.metrics;
  return <>
-  <div className="page-heading page-heading-actions"><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>window.print()} disabled={!data}><Printer size={14}/>Print / Save PDF</button><button className="btn" onClick={exportCsv} disabled={!data}><Download size={14}/>Export report data</button></div></div>
+  <HeaderActions><div className="heading-actions"><button className="btn btn-secondary" onClick={()=>window.print()} disabled={!data}><Printer size={14}/>Print / Save PDF</button><button className="btn" onClick={exportCsv} disabled={!data}><Download size={14}/>Export report data</button></div></HeaderActions>
   {error&&<div className="alert" role="alert">{error}</div>}
   {loading?<div className="panel empty-state">Preparing management report…</div>:data&&<>
    <article className="report-sheet"><div className="report-cover"><div><span className="report-brand">SAMORA LEDGER TECH</span><p className="eyebrow" style={{marginTop:28,color:"#8ed0c5"}}>Executive intelligence</p><h2>Management<br/>Performance Brief</h2><p>Transaction activity · Portfolio-level risk · Operational trends</p></div><div className="report-date"><Calendar size={14}/><span>Generated<br/><strong>{new Date(data.generated_at).toLocaleString()}</strong></span></div></div>

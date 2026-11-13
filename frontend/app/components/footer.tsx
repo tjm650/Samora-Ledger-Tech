@@ -14,7 +14,7 @@ export default function Footer(){
     </div>
     <nav className="footer-links" aria-label="Platform navigation">
      <span className="footer-links-heading">Platform</span>
-     <Link href="/">Overview</Link>
+     <Link href="/">Overview</Link>\n     <Link href="/crm">Customer management</Link>
      <Link href="/transactions">Transactions</Link>
      <Link href="/risk">Risk &amp; exposure</Link>
      <Link href="/reports">Management reports</Link>

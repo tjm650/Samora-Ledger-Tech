@@ -375,3 +375,16 @@ def list_staff(x_api_key: str | None = Header(default=None), authorization: str 
     except Exception as exc:
         log.exception("CRM staff directory retrieval failed")
         raise HTTPException(500, "Unable to retrieve staff directory") from exc
+
+
+@router.get("/risk/movements")
+def risk_movements(days: int = Query(90, ge=7, le=730), direction: Literal["all","increased","decreased"] = "all", x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+    _staff(x_api_key, authorization, ALL_STAFF_ROLES)
+    try:
+        cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).isoformat()
+        result=_db().rpc("risk_score_movements",{"p_since":cutoff,"p_direction":direction}).execute().data
+        if isinstance(result,list) and result: result=result[0]
+        return result if isinstance(result,dict) else {"total":0,"movements":[]}
+    except Exception as exc:
+        log.exception("Risk movement retrieval failed")
+        raise HTTPException(500,"Unable to retrieve risk score movements") from exc

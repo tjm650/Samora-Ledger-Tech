@@ -470,3 +470,25 @@ body{background:#f4f6f8;color:#1a1a1a}
  .header-page-title{padding:0;border:0;font-size:17px;line-height:1.2}
  .page-heading-actions{padding:0;margin:0 0 18px;min-height:0;align-items:center}
 }
+
+
+/* Shared page identity in the global banking header */
+.header-page-title{display:block}
+.page-heading-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;min-height:0;margin:0 0 22px;padding:0;background:transparent;border:0;box-shadow:none}
+.page-heading-actions:after{display:none}
+@media(min-width:761px){
+ .workspace-header-left{flex-direction:row;align-items:center;gap:24px}
+ .header-page-title{padding-left:24px;border-left:1px solid rgba(255,255,255,.2)}
+}
+@media(max-width:760px){
+ .workspace-header{height:auto;min-height:94px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0b1d34!important}
+ .workspace-header-left{display:flex;flex:1 1 auto;min-width:0;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px}
+ .header-page-title{padding:0;border:0;color:#fff;font-size:17px;line-height:1.2;white-space:normal}
+ .header-mobile-menu{position:static!important;inset:auto!important;display:grid!important;flex:0 0 40px;width:40px;height:40px;margin-left:auto;background:#f4b335;color:#0b1d34;border:1px solid #f4b335;box-shadow:none}
+ .page-heading-actions{margin:0 0 18px;padding:0;min-height:0;justify-content:flex-end}
+}
+@media(max-width:420px){
+ .workspace-header{min-height:90px;padding:12px}
+ .header-page-title{font-size:16px}
+ .workspace-header-left{gap:7px}
+}

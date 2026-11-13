@@ -22,7 +22,10 @@ const groups=[
   {href:"/risk",label:"Risks",icon:ShieldAlert},
   {href:"/governance",label:"Model governance",icon:Scale}
  ]},
- {label:"Customer Growth",items:[\n  {href:"/growth",label:"Growth intelligence",icon:ShoppingBag}\n ]},\n {label:"Insights & Reporting",items:[
+ {label:"Customer Growth",items:[
+  {href:"/growth",label:"Growth intelligence",icon:ShoppingBag}
+ ]},
+ {label:"Insights & Reporting",items:[
   {href:"/analytics",label:"Analytics",icon:BarChart3},
   {href:"/reports",label:"Management reports",icon:FileText}
  ]},

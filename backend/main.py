@@ -224,6 +224,20 @@ def analytics_overview(
         log.exception("Date-range analytics aggregation failed")
         raise HTTPException(500,"Unable to calculate date-range analytics") from exc
 
+
+@app.get("/api/v1/analytics/snapshots")
+def analytics_snapshots(
+    page:int=Query(default=1,ge=1),page_size:int=Query(default=25,ge=1,le=100),
+    x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
+):
+    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    try:
+        result=get_database().table("executive_analytics_snapshots").select("*",count="exact").order("generated_at",desc=True).range((page-1)*page_size,page*page_size-1).execute()
+        return {"snapshots":result.data or [],"total":result.count or 0,"page":page,"page_size":page_size}
+    except Exception as exc:
+        log.exception("Analytics snapshot retrieval failed")
+        raise HTTPException(500,"Unable to retrieve analytics snapshots") from exc
+
 @app.post("/api/v1/admin/seed-and-run-demo")
 def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
     authorize(x_api_key)

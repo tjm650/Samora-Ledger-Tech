@@ -3516,3 +3516,60 @@ body:has(.workspace-sidebar.collapsed) .site-footer {
     transition: none !important;
   }
 }
+
+/* Keep section initials visible in the compact desktop navigation rail. */
+@media (min-width: 761px) {
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    display: block;
+    width: 42px;
+    max-width: 42px;
+    max-height: 20px;
+    margin: 0 0 6px;
+    opacity: 1;
+    visibility: visible;
+    overflow: hidden;
+    text-align: center;
+    line-height: 16px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-full {
+    display: none;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-initial {
+    display: inline;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-title,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-title {
+    width: auto;
+    max-width: 150px;
+    text-align: left;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-full,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-full {
+    display: inline;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-initial,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-initial {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    display: block;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-full {
+    display: inline;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-initial {
+    display: none;
+  }
+}

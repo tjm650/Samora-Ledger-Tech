@@ -12,6 +12,8 @@ Enterprise Banking Transaction Analytics & Executive Decision-Support MVP.
 The original populated tables remain intact: `customers`, `transactions`, `customer_features` and `predictive_insights`. Enterprise functionality is added through non-destructive migrations; no existing customer or transaction rows are recreated.
 
 Migrations currently include:
+- `20261111110229_samora_ledger_initial_schema.sql`
+- `20261111110250_optimize_rls_policy_auth_lookups.sql`
 - `20261113122811_enterprise_crm_risk_reporting_governance.sql`
 - `20261113122834_harden_enterprise_rls_and_indexes.sql`
 - `20261113123159_use_configured_risk_thresholds.sql`
@@ -22,7 +24,7 @@ Migrations currently include:
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 
 ## Local setup
-1. Create a Supabase project and apply `database/schema.sql`, followed by the timestamped migrations in `supabase/migrations/`.
+1. Create a Supabase project and apply every migration in `supabase/migrations/` in timestamp order (for example, with the Supabase CLI `supabase db push`). `database/schema.sql` is retained as the original standalone core-schema reference; do not apply it again after running the initial migration.
 2. Copy `backend/.env.example` to `backend/.env`, set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `API_KEY`. Never expose the service-role key to the browser.
 3. From `backend`: `python -m venv .venv && pip install -r requirements.txt`; start the API with `uvicorn main:app --reload`.
 4. Copy `frontend/.env.example` to `frontend/.env.local`. Set server-side `SAMORA_API_URL` and `SAMORA_API_KEY`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Run `npm install && npm run dev` from `frontend`.

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from crm_api import _db, _staff, ALL_STAFF_ROLES
+from crm_api import _db, _staff, _demo_read, ALL_STAFF_ROLES
 
 router = APIRouter(prefix="/api/v1", tags=["reports and governance"])
 log = logging.getLogger("samora.management")
@@ -78,7 +78,7 @@ def generate_report(payload: ReportRequest, x_api_key: str | None = Header(defau
 
 @router.get("/reports")
 def list_reports(page:int=Query(1,ge=1),page_size:int=Query(25,ge=1,le=100),x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,ALL_STAFF_ROLES)
+    _demo_read(x_api_key,authorization,ALL_STAFF_ROLES)
     try:
         result=_db().table("report_runs").select("*",count="exact").order("generated_at",desc=True).range((page-1)*page_size,page*page_size-1).execute()
         return {"reports":result.data or [],"total":result.count or 0,"page":page,"page_size":page_size}
@@ -88,7 +88,7 @@ def list_reports(page:int=Query(1,ge=1),page_size:int=Query(25,ge=1,le=100),x_ap
 
 @router.get("/reports/{report_id}")
 def get_report(report_id:UUID,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,ALL_STAFF_ROLES)
+    _demo_read(x_api_key,authorization,ALL_STAFF_ROLES)
     try:
         db=_db()
         report=db.table("report_runs").select("*").eq("report_id",str(report_id)).maybe_single().execute().data
@@ -126,7 +126,7 @@ def download_report(report_id:UUID,format:Literal["csv"]="csv",x_api_key:str|Non
 
 @router.get("/governance/models")
 def governance_models(x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,ALL_STAFF_ROLES)
+    _demo_read(x_api_key,authorization,ALL_STAFF_ROLES)
     try:
         rows=_db().table("model_versions").select("*").order("created_at",desc=True).execute().data or []
         return {"models":rows,"evaluation_metrics_available":False,"metrics_note":"No validated labelled churn outcome dataset is registered; model performance metrics are not reported."}
@@ -136,7 +136,7 @@ def governance_models(x_api_key:str|None=Header(default=None),authorization:str|
 
 @router.get("/governance/runs")
 def governance_runs(page:int=Query(1,ge=1),page_size:int=Query(25,ge=1,le=100),x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,ALL_STAFF_ROLES)
+    _demo_read(x_api_key,authorization,ALL_STAFF_ROLES)
     try:
         result=_db().table("model_runs").select("*",count="exact").order("started_at",desc=True).range((page-1)*page_size,page*page_size-1).execute()
         return {"runs":result.data or [],"total":result.count or 0,"page":page,"page_size":page_size}
@@ -146,7 +146,7 @@ def governance_runs(page:int=Query(1,ge=1),page_size:int=Query(25,ge=1,le=100),x
 
 @router.get("/governance/configuration")
 def governance_configuration(x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,ALL_STAFF_ROLES)
+    _demo_read(x_api_key,authorization,ALL_STAFF_ROLES)
     try:
         rows=_db().table("model_configurations").select("*").order("configuration_key").order("version",desc=True).execute().data or []
         thresholds=_db().table("risk_thresholds").select("*").order("name").execute().data or []

@@ -1803,16 +1803,16 @@ button {
 }
 
 .sidebar-link.active svg {
-  color: #0b1d34
+  color: #f4b335
 }
 
 .sidebar-active-mark {
   position: absolute;
-  /* right: 10px;
+  right: 10px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #f4b335 */
+  background: #f4b335
 }
 
 .sidebar-bottom {
@@ -1854,8 +1854,8 @@ button {
 
 .workspace-sidebar.collapsed {
   width: 76px;
-  padding-left: 5px;
-  padding-right: 5px
+  padding-left: 10px;
+  padding-right: 10px
 }
 
 .workspace-sidebar.collapsed .sidebar-topline {

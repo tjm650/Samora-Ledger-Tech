@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from analytics import engineer_features
+from analytics import engineer_features, score_customer
 from crm_api import InteractionCreate, TaskCreate, TaskPatch, RiskThresholdUpdate
 from management_api import ReportRequest
 
@@ -45,3 +45,13 @@ def test_risk_thresholds_must_be_ordered_by_endpoint_validation():
 def test_report_period_is_explicit_and_validated():
     report = ReportRequest(report_key="executive_summary", period_start="2026-10-01", period_end="2026-10-31")
     assert report.period_end >= report.period_start
+
+
+def test_versioned_scoring_configuration_changes_rule_contribution():
+    row = pd.Series({
+        "salary_disruption_flag": True, "recency_days": 0, "velocity_score": 1.0,
+        "balance_avg_30d": 5000, "frequency_30d": 10,
+        "discretionary_spend_ratio": 0.2, "balance_drawdown_pct": 0.1
+    })
+    baseline = score_customer(row, {"base_score": 5, "salary_disruption_points": 10})
+    assert baseline["churn_risk_score"] == 15

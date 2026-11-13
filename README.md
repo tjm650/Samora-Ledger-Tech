@@ -15,6 +15,7 @@ Migrations currently include:
 - `20261113130000_enterprise_crm_risk_reporting_governance.sql`
 - `20261113140000_harden_enterprise_rls_and_indexes.sql`
 - `20261113150000_use_configured_risk_thresholds.sql`
+- `20261113160000_version_scoring_configuration_references.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 
@@ -27,7 +28,7 @@ The migrations have been applied to the configured Supabase project and verified
 6. Provision staff accounts through the trusted Supabase Auth administration process. Assign approved `app_metadata.role` values: `executive`, `admin`, `analyst`, or `relationship_manager`. The frontend has no public registration. Never grant roles through user-editable metadata.
 
 ## API surface
-All protected backend APIs require the private `X-API-Key` header and a verified Supabase staff JWT in `Authorization: Bearer <token>`. The health endpoint is public. Pipeline execution is restricted to the trusted server-side proxy/API key.
+All staff-facing data and management APIs require the private `X-API-Key` header and a verified Supabase staff JWT in `Authorization: Bearer <token>`. The health endpoint is public. Pipeline and one-shot demo administration operations are restricted to the trusted server-side proxy/API key and are never exposed to browser clients.
 
 - `GET /health`
 - `GET /api/v1/executive/overview`
@@ -40,7 +41,7 @@ All protected backend APIs require the private `X-API-Key` header and a verified
 - `GET|POST /api/v1/crm/tasks`, `PATCH /api/v1/crm/tasks/{task_id}`
 - `GET /api/v1/crm/customers/{customer_id}/tasks`
 - `GET /api/v1/risk/summary`, `/trends`, `/alerts`, `/thresholds`
-- `GET|POST /api/v1/reports`, `GET /api/v1/reports/{report_id}`, `GET /api/v1/reports/{report_id}/download?format=csv`
+- `GET /api/v1/reports`, `POST /api/v1/reports/generate`, `GET /api/v1/reports/{report_id}`, `GET /api/v1/reports/{report_id}/download?format=csv`
 - `GET /api/v1/governance/models`, `/runs`, `/configuration`, `/audit-logs`
 - `GET /api/v1/settings/me`, `/preferences`, `/organisation`
 

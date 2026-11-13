@@ -57,7 +57,7 @@ export default function Navbar(){
    </div>
    <nav className="sidebar-nav">
     {groups.map(group=><section className="sidebar-group" key={group.label}>
-     <h2 className="sidebar-group-title">{group.label}</h2>
+     {group.label && <h2 className="sidebar-group-title"><span className="sidebar-group-initial" aria-hidden="true">{group.label.trim().charAt(0).toUpperCase()}</span><span className="sidebar-group-full">{group.label}</span></h2>}
      {group.items.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={item.label} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
     </section>)}
    </nav>

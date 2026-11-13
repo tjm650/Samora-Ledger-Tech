@@ -267,12 +267,13 @@ def risk_summary(x_api_key: str | None = Header(default=None), authorization: st
         raise HTTPException(500, "Unable to retrieve risk summary") from exc
 
 @router.get("/risk/trends")
-def risk_trends(days: int = Query(90, ge=7, le=730), x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
+def risk_trends(days: int = Query(90, ge=7, le=730), interval: Literal["day","week","month"] = "day", x_api_key: str | None = Header(default=None), authorization: str | None = Header(default=None)):
     _staff(x_api_key, authorization, ALL_STAFF_ROLES)
     try:
         cutoff = (datetime.now(timezone.utc)-timedelta(days=days)).isoformat()
-        rows = _db().table("risk_score_history").select("assessed_at,risk_score,risk_band").gte("assessed_at", cutoff).order("assessed_at").range(0,9999).execute().data or []
-        return {"days": days, "history_available": bool(rows), "observations": rows}
+        rows = _db().rpc("risk_history_trend", {"p_since":cutoff,"p_interval":interval}).execute().data or []
+        if isinstance(rows,dict): rows=rows.get("observations",[])
+        return {"days": days, "interval":interval, "history_available": bool(rows), "observations": rows}
     except Exception as exc:
         log.exception("Risk trend retrieval failed")
         raise HTTPException(500, "Unable to retrieve risk trends") from exc

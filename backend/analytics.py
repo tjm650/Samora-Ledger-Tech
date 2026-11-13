@@ -26,6 +26,9 @@ def engineer_features(transactions: pd.DataFrame, now=None) -> pd.DataFrame:
         salary_disruption=bool(not salary.empty and (now-last_salary).days>35)
         prev_salary=bool(len(salary)>0)
         count30=len(recent); count90=len(d90)
+        debit30=recent[recent.transaction_type=="Debit"]
+        debit60=d60[d60.transaction_type=="Debit"]
+        debit90=d90[d90.transaction_type=="Debit"]
         velocity=float(count30/max(count90/3,1))
         discretionary=float(debits[debits.merchant_category.isin(DISCRETIONARY)].amount.sum())
         total=float(debits.amount.sum())
@@ -36,7 +39,10 @@ def engineer_features(transactions: pd.DataFrame, now=None) -> pd.DataFrame:
         current=float(all_bal.iloc[-1]) if len(all_bal) else 0
         drawdown=max(0.0,(peak-current)/peak) if peak>0 else 0.0
         rows.append({"customer_id":str(cid),"recency_days":int((now-g.timestamp.max()).days),
-          "frequency_30d":count30,"monetary_spend_90d":round(total,2),"balance_avg_30d":round(balance_avg,2),
+          "frequency_30d":count30,"monetary_spend_30d":round(float(debit30.amount.sum()),2),
+          "monetary_spend_60d":round(float(debit60.amount.sum()),2),"monetary_spend_90d":round(float(debit90.amount.sum()),2),
+          "average_transaction_value_90d":round(float(debit90.amount.mean()),2) if len(debit90) else 0.0,
+          "balance_avg_30d":round(balance_avg,2),
           "velocity_score":round(velocity,4),"discretionary_spend_ratio":round(discretionary/total,5) if total else 0,
           "salary_disruption_flag":salary_disruption,"balance_drawdown_pct":round(drawdown,5),
           "behavior_segment":"salary_disrupted" if salary_disruption else ("engaged" if count30>=8 else "low_engagement"),
@@ -64,6 +70,9 @@ def score_customer(row):
 
 def run_pipeline():
     from supabase import create_client
+    import time
+    started_at=datetime.now(timezone.utc)
+    started_clock=time.monotonic()
     url=os.environ["SUPABASE_URL"]; key=os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     db=create_client(url,key)
     customers=db.table("customers").select("customer_id").execute().data or []
@@ -89,7 +98,7 @@ def run_pipeline():
                 break
             offset+=page_size
     frame=engineer_features(pd.DataFrame(transactions))
-    if frame.empty: return {"customers_processed":0}
+    if frame.empty: return {"customers_processed":0,"records_skipped":len(customer_ids)}
     features=[]; insights=[]
     for row in frame.itertuples(index=False):
         data=row._asdict(); score=score_customer(row)
@@ -98,7 +107,47 @@ def run_pipeline():
     for batch in range(0,len(features),250):
         db.table("customer_features").upsert(features[batch:batch+250],on_conflict="customer_id").execute()
         db.table("predictive_insights").upsert(insights[batch:batch+250],on_conflict="customer_id").execute()
-    return {"customers_processed":len(features),"insights_written":len(insights)}
+
+    # Append immutable feature and risk snapshots for audit and historical monitoring.
+    evaluated_at=datetime.now(timezone.utc)
+    history_features=[]
+    risk_history=[]
+    for feature, insight in zip(features, insights):
+        history_features.append({
+            "customer_id":feature["customer_id"],"calculated_at":evaluated_at.isoformat(),
+            "feature_engine_version":"features-v1",
+            **{key:feature.get(key) for key in (
+                "recency_days","frequency_30d","monetary_spend_30d","monetary_spend_60d",
+                "monetary_spend_90d","average_transaction_value_90d","balance_avg_30d",
+                "balance_drawdown_pct","velocity_score","discretionary_spend_ratio",
+                "salary_disruption_flag","behavior_segment"
+            )}
+        })
+        score=float(insight["churn_risk_score"])
+        risk_history.append({
+            "customer_id":feature["customer_id"],"risk_score":score,
+            "risk_band":"high" if score>=60 else ("moderate" if score>=30 else "low"),
+            "primary_risk_driver":insight["primary_churn_driver"],
+            "rules_engine_version":"rules-v1","assessed_at":evaluated_at.isoformat()
+        })
+    for batch in range(0,len(history_features),250):
+        db.table("customer_feature_history").insert(history_features[batch:batch+250]).execute()
+        db.table("risk_score_history").insert(risk_history[batch:batch+250]).execute()
+
+    version=(db.table("model_versions").select("model_version_id")
+             .eq("version","rules-v1").maybe_single().execute().data or {})
+    run_row={
+        "model_version_id":version.get("model_version_id"),
+        "status":"completed","customers_evaluated":len(features),
+        "records_skipped":max(0,len(customer_ids)-len(features)),"records_failed":0,
+        "execution_duration_ms":int((time.monotonic()-started_clock)*1000),
+        "started_at":started_at.isoformat(),"completed_at":evaluated_at.isoformat(),
+        "metrics":None
+    }
+    db.table("model_runs").insert(run_row).execute()
+    return {"customers_processed":len(features),"insights_written":len(insights),
+            "feature_snapshots_written":len(history_features),"risk_snapshots_written":len(risk_history),
+            "rules_engine_version":"rules-v1","execution_duration_ms":run_row["execution_duration_ms"]}
 
 def explain_customer(customer_id):
     from supabase import create_client

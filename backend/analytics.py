@@ -41,7 +41,7 @@ def engineer_features(transactions: pd.DataFrame, now=None) -> pd.DataFrame:
         rows.append({"customer_id":str(cid),"recency_days":int((now-g.timestamp.max()).days),
           "frequency_30d":count30,"monetary_spend_30d":round(float(debit30.amount.sum()),2),
           "monetary_spend_60d":round(float(debit60.amount.sum()),2),"monetary_spend_90d":round(float(debit90.amount.sum()),2),
-          "average_transaction_value_90d":round(float(debit90.amount.mean()),2) if len(debit90) else 0.0,
+          "average_transaction_value_90d":round(float(d90.amount.mean()),2) if len(d90) else 0.0,
           "balance_avg_30d":round(balance_avg,2),
           "velocity_score":round(velocity,4),"discretionary_spend_ratio":round(discretionary/total,5) if total else 0,
           "salary_disruption_flag":salary_disruption,"balance_drawdown_pct":round(drawdown,5),

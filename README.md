@@ -2,10 +2,10 @@
 Enterprise Banking Transaction Analytics & Executive Decision-Support MVP.
 
 ## Source layout
-- `database/schema.sql` — original Supabase core schema reference.\n- `supabase/migrations/` — canonical, ordered Supabase migration history (kept at repository root for Supabase CLI compatibility).
-- `supabase/migrations/` — additive, version-controlled enterprise schema migrations.
+- `database/schema.sql` — original Supabase core schema reference.
+- `supabase/migrations/` — canonical, ordered Supabase migration history (kept at repository root for Supabase CLI compatibility).
 - `backend/` — Python 3.11 FastAPI service, feature engineering, transparent churn scoring, CRM workflow, risk monitoring, management reports, governance, settings, customer value, product recommendation and AI business-insight APIs.
-- `frontend/` — Next.js App Router executive workspace: overview, transactions, risk, analytics, reports, governance, CRM, customer profiles and settings and customer growth intelligence.
+- `frontend/` — Next.js App Router executive workspace: overview, transactions, risk, analytics, reports, governance, CRM, customer profiles, settings and customer growth intelligence.
 - `render.yaml` — Render deployment blueprint.
 
 ## Existing data and safe migrations
@@ -24,7 +24,9 @@ Migrations currently include:
 - `20261113123927_aggregate_risk_history_trends.sql`
 - `20261113124048_backfill_existing_feature_and_risk_baselines.sql`
 - `20261113124150_risk_score_movements.sql`
-- `20261113124328_align_feature_average_transaction_value.sql`\n- `20261113222706_customer_growth_intelligence_foundation.sql`\n- `20261113223100_customer_growth_intelligence_foreign_key_indexes.sql`
+- `20261113124328_align_feature_average_transaction_value.sql`
+- `20261113222706_customer_growth_intelligence_foundation.sql`
+- `20261113223210_customer_growth_intelligence_foreign_key_indexes.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 
@@ -52,12 +54,16 @@ All staff-facing data and management APIs require the private `X-API-Key` header
 - `GET /api/v1/risk/summary`, `/trends`, `/movements`, `/alerts`, `/thresholds`
 - `GET /api/v1/reports`, `POST /api/v1/reports/generate`, `GET /api/v1/reports/{report_id}`, `GET /api/v1/reports/{report_id}/download?format=csv`
 - `GET /api/v1/governance/models`, `/runs`, `/configuration`, `/audit-logs`
-- `GET /api/v1/settings/me`, `/preferences`, `/organisation`\n- `GET /api/v1/growth/overview`, `/customers/value`, `/recommendations`, `/products`\n- `POST /api/v1/growth/run` — calculate relative customer value scores, rules-based product opportunities and portfolio insights.\n- `POST /api/v1/growth/assistant` — AI-assisted analysis over aggregate portfolio context (requires `OPENAI_API_KEY`).\n- `POST /api/v1/growth/products`, `/customers/{customer_id}/products`, `/customers/{customer_id}/churn-outcomes`, `/recommendations/{recommendation_id}/outcomes`
+- `GET /api/v1/settings/me`, `/preferences`, `/organisation`
+- `GET /api/v1/growth/overview`, `/customers/value`, `/recommendations`, `/products`
+- `POST /api/v1/growth/run` — calculate relative customer value scores, rules-based product opportunities and portfolio insights.
+- `POST /api/v1/growth/assistant` — AI-assisted analysis over aggregate portfolio context (requires `OPENAI_API_KEY`).
+- `POST /api/v1/growth/products`, `/customers/{customer_id}/products`, `/customers/{customer_id}/churn-outcomes`, `/recommendations/{recommendation_id}/outcomes`
 
 The legacy `GET /api/v1/customers` and `GET /api/v1/explain/{customer_id}` routes remain as authenticated compatibility endpoints.
 
 ## Security and roles
-The Next.js workspace requires Supabase Auth sessions and trusted `app_metadata.role` claims. Backend routes independently validate the staff JWT and role before using the server-side service-role database client. New enterprise tables have RLS enabled, are not granted to anon/authenticated Data API roles, and are not granted to `anon` or `authenticated`; access is through the trusted backend using its server-side service-role client. The staff profile table permits authenticated users to read only their own profile.
+The Next.js workspace requires Supabase Auth sessions and trusted `app_metadata.role` claims. Backend routes independently validate the staff JWT and role before using the server-side service-role database client. New enterprise tables have RLS enabled, are not granted to `anon` or `authenticated`; access is through the trusted backend using its server-side service-role client. The staff profile table permits authenticated users to read only their own profile.
 
 The CRM directory and customer profiles are confidential staff functionality. Executive aggregate analytics omit customer-level information. The Supabase service-role key and Render API key are server-only.
 

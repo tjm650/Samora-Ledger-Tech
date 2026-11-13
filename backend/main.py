@@ -37,6 +37,13 @@ def authorize_staff(x_api_key: str|None, authorization: str|None, allowed_roles=
     if role not in allowed: raise HTTPException(403,"Your staff role is not authorised")
     return user
 
+def authorize_demo_read(x_api_key: str|None, authorization: str|None, allowed_roles=None):
+    """Allow server-to-server public demo reads only when explicitly enabled."""
+    if os.getenv("DEMO_PUBLIC_READS") == "true":
+        authorize(x_api_key)
+        return None
+    return authorize_staff(x_api_key, authorization, allowed_roles)
+
 def get_database():
     from supabase import create_client
     url=os.getenv("SUPABASE_URL"); key=os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -141,7 +148,7 @@ def pipeline(x_api_key: str|None=Header(default=None)):
 
 @app.get("/api/v1/executive/overview")
 def executive_overview(period_days:int=Query(default=90,ge=30,le=365),x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    authorize_demo_read(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     try:
         cached=_OVERVIEW_CACHE.get(period_days)
         if cached and time.monotonic()-cached[0]<_OVERVIEW_CACHE_TTL_SECONDS: return cached[1]
@@ -162,7 +169,7 @@ def executive_transactions(
     transaction_type:str|None=Query(default=None),category:str|None=Query(default=None),
     x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
 ):
-    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    authorize_demo_read(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     allowed_types={"Debit","Credit"}
     allowed_categories={"Groceries","Travel","Luxury","Utilities","Salary","ATM","Transfers"}
     if transaction_type and transaction_type not in allowed_types: raise HTTPException(422,"Unsupported transaction type")
@@ -190,7 +197,7 @@ def analytics_overview(
     save_snapshot:bool=False,
     x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
 ):
-    staff=authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    staff=authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"}) if save_snapshot else authorize_demo_read(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     try:
         today=datetime.now(timezone.utc).date()
         end_day=end_date or today
@@ -230,7 +237,7 @@ def analytics_snapshots(
     page:int=Query(default=1,ge=1),page_size:int=Query(default=25,ge=1,le=100),
     x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)
 ):
-    authorize_staff(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
+    authorize_demo_read(x_api_key,authorization,{"admin","analyst","executive","relationship_manager"})
     try:
         result=get_database().table("executive_analytics_snapshots").select("*",count="exact").order("generated_at",desc=True).range((page-1)*page_size,page*page_size-1).execute()
         return {"snapshots":result.data or [],"total":result.count or 0,"page":page,"page_size":page_size}
@@ -258,7 +265,7 @@ def seed_and_run_demo(x_api_key: str|None=Header(default=None)):
 # web application intentionally does not expose customer portfolio or individual profiles.
 @app.get("/api/v1/customers")
 def list_customers(x_api_key: str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    authorize_staff(x_api_key,authorization)
+    authorize_demo_read(x_api_key,authorization)
     try:
         db=get_database()
         customers=(db.table("customers").select("customer_id,full_name,email,account_tier,created_at").order("full_name").range(0,999).execute().data or [])
@@ -273,7 +280,7 @@ def list_customers(x_api_key: str|None=Header(default=None),authorization:str|No
 
 @app.get("/api/v1/explain/{customer_id}")
 def explain(customer_id:str,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    authorize_staff(x_api_key,authorization)
+    authorize_demo_read(x_api_key,authorization)
     try:
         result=explain_customer(customer_id)
         if result is None: raise HTTPException(404,"Customer not found")

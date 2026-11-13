@@ -55,11 +55,13 @@ def generate_report(payload: ReportRequest, x_api_key: str | None = Header(defau
         else:
             content={"metrics":overview["metrics"],"risk_metrics":overview["risk_metrics"],"transaction_trend":overview["transaction_trend"]}
         definitions=db.table("report_definitions").select("report_definition_id").eq("report_key",payload.report_key).maybe_single().execute().data or {}
+        config_rows=db.table("model_configurations").select("version").eq("configuration_key","rules-v1-scoring-baseline").order("version",desc=True).limit(1).execute().data or []
+        configuration_version=int(config_rows[0]["version"]) if config_rows else 0
         run={
             "report_definition_id":definitions.get("report_definition_id"),"report_key":payload.report_key,
             "requested_by":actor["user_id"],"period_start":payload.period_start.isoformat(),
             "period_end":payload.period_end.isoformat(),"status":"completed",
-            "analytics_version":"executive-rules-v1","data_cutoff_at":datetime.now(timezone.utc).isoformat(),
+            "analytics_version":"rules-v1","configuration_version":configuration_version,"data_cutoff_at":datetime.now(timezone.utc).isoformat(),
             "parameters":payload.parameters
         }
         created=db.table("report_runs").insert(run).execute().data
@@ -154,6 +156,16 @@ def governance_configuration(x_api_key:str|None=Header(default=None),authorizati
 @router.patch("/governance/configuration")
 def update_governance_configuration(payload:ConfigurationUpdate,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
     actor=_staff(x_api_key,authorization,{"admin"})
+    if payload.configuration_key=="rules-v1-scoring-baseline":
+        allowed={"base_score","salary_disruption_points","maximum_recency_points","recency_points_per_day","velocity_decline_points","low_balance_points","drawdown_points"}
+        if not allowed.issubset(payload.configuration_value):
+            raise HTTPException(422,"Scoring configuration is missing required numeric fields")
+        try:
+            values={key:float(payload.configuration_value[key]) for key in allowed}
+        except (TypeError,ValueError):
+            raise HTTPException(422,"Scoring configuration values must be numeric")
+        if any(value<0 or value>100 for value in values.values()):
+            raise HTTPException(422,"Scoring configuration values must be between 0 and 100")
     try:
         db=_db()
         previous=db.table("model_configurations").select("*").eq("configuration_key",payload.configuration_key).order("version",desc=True).limit(1).execute().data or []

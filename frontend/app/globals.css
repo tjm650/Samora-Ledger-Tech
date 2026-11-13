@@ -454,6 +454,6 @@ body{background:#f4f6f8;color:#1a1a1a}
 
 /* Mobile navigation trigger sits at the upper-right edge of the page heading */
 @media(max-width:760px){
- .sidebar-open-fab{top:96px;right:14px;left:auto;width:42px;height:42px;border:1px solid rgba(244,179,53,.75);background:#f4b335;color:#0b1d34;box-shadow:0 5px 16px rgba(11,29,52,.2)}
+ .sidebar-open-fab{top:132px;right:14px;left:auto;width:42px;height:42px;border:1px solid rgba(244,179,53,.75);background:#f4b335;color:#0b1d34;box-shadow:0 5px 16px rgba(11,29,52,.2)}
  .page-heading{padding-right:68px}
 }

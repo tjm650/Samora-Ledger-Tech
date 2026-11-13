@@ -457,3 +457,16 @@ body{background:#f4f6f8;color:#1a1a1a}
  .sidebar-open-fab{top:132px;right:14px;left:auto;width:42px;height:42px;border:1px solid rgba(244,179,53,.75);background:#f4b335;color:#0b1d34;box-shadow:0 5px 16px rgba(11,29,52,.2)}
  .page-heading{padding-right:68px}
 }
+
+
+/* Executive Overview title shares the global brand header */
+.workspace-header-left{display:flex;align-items:center;gap:24px;min-width:0}
+.header-page-title{margin:0;padding-left:24px;border-left:1px solid rgba(255,255,255,.2);color:#fff;font-family:Manrope,sans-serif;font-size:clamp(18px,2vw,23px);font-weight:800;letter-spacing:-.035em;line-height:1.2;white-space:nowrap}
+.page-heading-actions{min-height:0;margin:0 0 20px;padding:0;background:transparent;box-shadow:none;border-radius:0;justify-content:flex-end;overflow:visible}
+.page-heading-actions:after{display:none}
+@media(max-width:760px){
+ .workspace-header{height:auto;min-height:76px;padding:12px 15px;align-items:center}
+ .workspace-header-left{flex-direction:column;align-items:flex-start;justify-content:center;gap:8px}
+ .header-page-title{padding:0;border:0;font-size:17px;line-height:1.2}
+ .page-heading-actions{padding:0;margin:0 0 18px;min-height:0;align-items:center}
+}

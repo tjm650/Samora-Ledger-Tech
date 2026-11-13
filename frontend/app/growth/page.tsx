@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {RefreshCw,Users,TrendingUp,ShoppingBag,Lightbulb,ArrowUpRight} from "lucide-react";
+import {RefreshCw,Users,TrendingUp,ShoppingBag,Lightbulb} from "lucide-react";
 type Overview={customers_total:number;customers_scored:number;value_distribution:Record<string,number>;recommendations_total:number;cross_sell_count:number;up_sell_count:number;high_priority_count:number;insights:Array<{insight_id:string;title:string;summary:string;recommended_action:string;severity:string}>};
 type ValueRow={customer_id:string;full_name:string;account_tier:string;value_score:number;value_band:string;transaction_value_90d:number;average_balance_30d:number;profitability_status:string};
 type Recommendation={recommendation_id:string;recommendation_type:string;propensity_score:number;priority:string;rationale:string;status:string;customer:{full_name:string;account_tier:string};product:{product_name:string}};

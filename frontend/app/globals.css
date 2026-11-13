@@ -216,8 +216,8 @@ button{cursor:pointer}
 .sidebar-link svg{flex:0 0 auto;color:#8291a1}
 .sidebar-link:hover{background:#f3f7f8;color:#1c354b}
 .sidebar-link.active{background:#fff7e5;color:#0b1d34;font-weight:700}
-/* .sidebar-link.active svg{}
-.sidebar-active-mark{background:} */
+.sidebar-link.active svg{color:#f4b335}
+.sidebar-active-mark{position:absolute;right:10px;width:5px;height:5px;border-radius:50%;background:#f4b335}
 .sidebar-bottom{display:flex;align-items:center;gap:10px;margin-top:auto;padding:17px 9px 5px;border-top:1px solid #edf1f4}
 .sidebar-bottom-mark{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;border-radius:8px;background:#fff7e5;color:#f4b335}
 .sidebar-bottom-copy{display:flex;flex-direction:column;gap:3px;white-space:nowrap}

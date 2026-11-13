@@ -8,13 +8,12 @@ export default function Footer(){
     <div className="footer-brand-block">
      <Link href="/" className="brand" aria-label="Samora Ledger Tech home">
       <span className="brand-mark"><Building2 size={18}/></span>
-      <span><span className="brand-name">SAMORA LEDGER TECH</span><span className="brand-sub">BANKING INTELLIGENCE</span></span>
+      <span><span className="brand-name">SAMORA LEDGER TECH</span></span>
      </Link>
-     <p className="footer-brand-copy">Clear insight for better banking decisions. Bringing transaction performance, risk oversight and management intelligence into one executive view.</p>
     </div>
     <nav className="footer-links" aria-label="Platform navigation">
      <span className="footer-links-heading">Platform</span>
-     <Link href="/">Overview</Link>\n     <Link href="/crm">Customer management</Link>
+     <Link href="/">Overview</Link>     <Link href="/crm">Customer management</Link>
      <Link href="/transactions">Transactions</Link>
      <Link href="/risk">Risk &amp; exposure</Link>
      <Link href="/reports">Management reports</Link>
@@ -22,7 +21,6 @@ export default function Footer(){
    </div>
    <div className="footer-bottom">
     <span>© {new Date().getFullYear()} Samora Ledger Tech. All rights reserved.</span>
-    <span>Built for informed, accountable decisions.</span>
    </div>
   </div>
  </footer>;

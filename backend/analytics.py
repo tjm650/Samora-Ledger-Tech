@@ -49,14 +49,17 @@ def engineer_features(transactions: pd.DataFrame, now=None) -> pd.DataFrame:
           "_salary_ever":prev_salary,"_balance_current":current,"_discretionary":discretionary})
     return pd.DataFrame(rows)
 
-def score_customer(row):
-    """Explainable baseline probability; replace synthetic proxy with validated labels for production."""
-    risk=8.0; drivers=[]
-    if row.salary_disruption_flag: risk+=42; drivers.append("Salary Deposit Ceased")
-    if row.recency_days>14: risk+=min(24,(row.recency_days-14)*1.2); drivers.append("Recent Activity Declined")
-    if row.velocity_score<0.65: risk+=20; drivers.append("Transaction Velocity Declined")
-    if row.balance_avg_30d<250: risk+=18; drivers.append("Account Balance Near Zero")
-    if row.balance_drawdown_pct>0.7: risk+=12; drivers.append("Significant Balance Drawdown")
+def score_customer(row, config=None):
+    """Transparent heuristic churn score; not a probability or credit-risk estimate."""
+    config=config or {}
+    risk=float(config.get("base_score",8)); drivers=[]
+    if row.salary_disruption_flag: risk+=float(config.get("salary_disruption_points",42)); drivers.append("Salary Deposit Ceased")
+    if row.recency_days>14:
+        risk+=min(float(config.get("maximum_recency_points",24)),(row.recency_days-14)*float(config.get("recency_points_per_day",1.2)))
+        drivers.append("Recent Activity Declined")
+    if row.velocity_score<0.65: risk+=float(config.get("velocity_decline_points",20)); drivers.append("Transaction Velocity Declined")
+    if row.balance_avg_30d<250: risk+=float(config.get("low_balance_points",18)); drivers.append("Account Balance Near Zero")
+    if row.balance_drawdown_pct>0.7: risk+=float(config.get("drawdown_points",12)); drivers.append("Significant Balance Drawdown")
     risk=float(np.clip(risk,0,100))
     balance=float(row.balance_avg_30d); freq=int(row.frequency_30d); ratio=float(row.discretionary_spend_ratio)
     if balance>5000 and ratio>=.25: product="Platinum Travel Card"
@@ -99,9 +102,14 @@ def run_pipeline():
             offset+=page_size
     frame=engineer_features(pd.DataFrame(transactions))
     if frame.empty: return {"customers_processed":0,"records_skipped":len(customer_ids)}
+    config_rows=(db.table("model_configurations").select("configuration_value,version")
+                 .eq("configuration_key","rules-v1-scoring-baseline")
+                 .order("version",desc=True).limit(1).execute().data or [])
+    scoring_config=config_rows[0]["configuration_value"] if config_rows else {}
+    configuration_version=int(config_rows[0]["version"]) if config_rows else 0
     features=[]; insights=[]
     for row in frame.itertuples(index=False):
-        data=row._asdict(); score=score_customer(row)
+        data=row._asdict(); score=score_customer(row,scoring_config)
         features.append({k:data[k] for k in ("customer_id","recency_days","frequency_30d","monetary_spend_30d","monetary_spend_60d","monetary_spend_90d","average_transaction_value_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")})
         insights.append({"customer_id":data["customer_id"],**score})
     legacy_feature_fields=("customer_id","recency_days","frequency_30d","monetary_spend_90d","balance_avg_30d","velocity_score","discretionary_spend_ratio","salary_disruption_flag","balance_drawdown_pct","behavior_segment")
@@ -116,7 +124,7 @@ def run_pipeline():
              .eq("version","rules-v1").maybe_single().execute().data or {})
     run_row={
         "model_version_id":version.get("model_version_id"),
-        "status":"completed","customers_evaluated":len(features),
+        "status":"completed","customers_evaluated":len(features),"configuration_version":configuration_version,
         "records_skipped":max(0,len(customer_ids)-len(features)),"records_failed":0,
         "execution_duration_ms":int((time.monotonic()-started_clock)*1000),
         "started_at":started_at.isoformat(),"completed_at":evaluated_at.isoformat(),
@@ -152,7 +160,7 @@ def run_pipeline():
         risk_history.append({
             "customer_id":feature["customer_id"],"risk_score":score,"risk_band":band,
             "primary_risk_driver":insight["primary_churn_driver"],
-            "rules_engine_version":"rules-v1","assessed_at":evaluated_at.isoformat(),
+            "rules_engine_version":"rules-v1","configuration_version":configuration_version,"assessed_at":evaluated_at.isoformat(),
             "model_run_id":model_run_id
         })
         if prior:

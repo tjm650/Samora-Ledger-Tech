@@ -9,7 +9,7 @@ Enterprise Banking Transaction Analytics & Executive Decision-Support MVP.
 - `render.yaml` — Render deployment blueprint.
 
 ## Existing data and safe migrations
-The original populated tables remain intact: `customers`, `transactions`, `customer_features` and `predictive_insights`. Enterprise functionality is added through non-destructive migrations; no existing customer or transaction rows are recreated.
+The original core tables remain intact. The connected Supabase project contains a synthetic BancABC-style demo portfolio (1,000 fictional customers and approximately 214,000 transactions spanning the previous 12 months). All demo records use `example.test` email addresses and are explicitly tagged `data_origin='mock'`; they are not genuine BancABC customer records. The provenance migration adds this marker to core analytics tables and records the demo seed run. The seeder refuses to insert a second dataset into a non-empty customer table.
 
 Migrations currently include:
 - `20261111110229_samora_ledger_initial_schema.sql`
@@ -27,6 +27,7 @@ Migrations currently include:
 - `20261113124328_align_feature_average_transaction_value.sql`
 - `20261113222706_customer_growth_intelligence_foundation.sql`
 - `20261113223210_customer_growth_intelligence_foreign_key_indexes.sql`
+- `20261113224222_bancabc_mock_data_provenance.sql`
 
 The migrations have been applied to the configured Supabase project and verified in its migration history. For a new environment, apply the migrations in timestamp order after the original core schema.
 
@@ -35,7 +36,7 @@ The migrations have been applied to the configured Supabase project and verified
 2. Copy `backend/.env.example` to `backend/.env`, set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `API_KEY`. Never expose the service-role key to the browser.
 3. From `backend`: `python -m venv .venv && pip install -r requirements.txt`; start the API with `uvicorn main:app --reload`.
 4. Copy `frontend/.env.example` to `frontend/.env.local`. Set server-side `SAMORA_API_URL` and `SAMORA_API_KEY`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Run `npm install && npm run dev` from `frontend`.
-5. Configure Render with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `API_KEY`, and `API_CORS_ORIGINS`. To enable the optional AI Business Intelligence Assistant, also configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (defaults to `gpt-4o-mini`). The assistant sends aggregate portfolio metrics only, not customer names or account-level records. Configure Vercel with the two server-side Samora variables and the two public Supabase Auth variables. Do not prefix server secrets with `NEXT_PUBLIC_`.
+5. Configure Render with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `API_KEY`, and `API_CORS_ORIGINS`. To enable the AI Business Intelligence Assistant, configure `GEMINI_API_KEY` from Google AI Studio and optionally `GEMINI_MODEL` (defaults to `gemini-2.5-flash`). The assistant sends aggregate portfolio metrics only, not customer names or account-level records. Configure Vercel with the two server-side Samora variables and the two public Supabase Auth variables. Do not prefix server secrets with `NEXT_PUBLIC_`.
 6. Provision staff accounts through the trusted Supabase Auth administration process. Assign approved `app_metadata.role` values: `executive`, `admin`, `analyst`, or `relationship_manager`. The frontend has no public registration. Never grant roles through user-editable metadata.
 
 ## API surface
@@ -57,7 +58,7 @@ All staff-facing data and management APIs require the private `X-API-Key` header
 - `GET /api/v1/settings/me`, `/preferences`, `/organisation`
 - `GET /api/v1/growth/overview`, `/customers/value`, `/recommendations`, `/products`
 - `POST /api/v1/growth/run` — calculate relative customer value scores, rules-based product opportunities and portfolio insights.
-- `POST /api/v1/growth/assistant` — AI-assisted analysis over aggregate portfolio context (requires `OPENAI_API_KEY`).
+- `POST /api/v1/growth/assistant` — AI-assisted analysis over aggregate portfolio context (requires `GEMINI_API_KEY`).
 - `POST /api/v1/growth/products`, `/customers/{customer_id}/products`, `/customers/{customer_id}/churn-outcomes`, `/recommendations/{recommendation_id}/outcomes`
 
 The legacy `GET /api/v1/customers` and `GET /api/v1/explain/{customer_id}` routes remain as authenticated compatibility endpoints.
@@ -68,9 +69,9 @@ The Next.js workspace requires Supabase Auth sessions and trusted `app_metadata.
 The CRM directory and customer profiles are confidential staff functionality. Executive aggregate analytics omit customer-level information. The Supabase service-role key and Render API key are server-only.
 
 ## Model and data limitations
-The MVP uses a transparent rules-based churn-risk baseline, not a trained production classifier. The new customer value score is a relative portfolio ranking based on spending, average balance, activity and tenure; it is not customer lifetime value or measured bank profitability. Product recommendations are rules-based fit signals, not calibrated purchase probabilities or automated eligibility decisions. Verified customer churn outcomes can be recorded for a future supervised model, but no ML accuracy is claimed until sufficient labelled outcomes and validation are available. The optional AI assistant uses aggregate-only context and requires an OpenAI API key. It is not credit risk or probability of default. Explanations are not SHAP. No model accuracy, precision, recall or AUC is reported because there is no labelled churn-outcome dataset. Feature/risk history and model run records are written on future pipeline runs; no historical records are fabricated retroactively.
+The MVP uses a transparent rules-based churn-risk baseline, not a trained production classifier. The new customer value score is a relative portfolio ranking based on spending, average balance, activity and tenure; it is not customer lifetime value or measured bank profitability. Product recommendations are rules-based fit signals, not calibrated purchase probabilities or automated eligibility decisions. Verified customer churn outcomes can be recorded for a future supervised model, but no ML accuracy is claimed until sufficient labelled outcomes and validation are available. The Gemini-powered AI assistant uses aggregate-only context and requires a Google Gemini API key. It is not credit risk or probability of default. Explanations are not SHAP. No model accuracy, precision, recall or AUC is reported because there is no labelled churn-outcome dataset. Feature/risk history and model run records are written on future pipeline runs; no historical records are fabricated retroactively.
 
 The existing demo dataset is synthetic. Product offers are not validated suitability decisions. Currency values are not FX-normalised. Branch and geographic analytics are not exposed because those source dimensions do not exist. CSV management report export is supported; PDF export is not yet implemented.
 
 ## Validation
-CI compiles the Python backend, runs backend tests and runs the frontend TypeScript type-check. Live Render/Vercel deployment verification is tracked separately from source commits. The demo seeder is one-shot and must only be used against an empty disposable demo database.
+CI compiles the Python backend, runs backend tests and runs the frontend TypeScript type-check. Live Render/Vercel deployment verification is tracked separately from source commits. The demo seeder is one-shot and refuses to insert into a non-empty customer table. The currently connected demo dataset is synthetic and labelled with `data_origin='mock'`.

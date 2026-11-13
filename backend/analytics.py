@@ -110,8 +110,29 @@ def run_pipeline():
 
     # Append immutable feature and risk snapshots for audit and historical monitoring.
     evaluated_at=datetime.now(timezone.utc)
+    version=(db.table("model_versions").select("model_version_id")
+             .eq("version","rules-v1").maybe_single().execute().data or {})
+    run_row={
+        "model_version_id":version.get("model_version_id"),
+        "status":"completed","customers_evaluated":len(features),
+        "records_skipped":max(0,len(customer_ids)-len(features)),"records_failed":0,
+        "execution_duration_ms":int((time.monotonic()-started_clock)*1000),
+        "started_at":started_at.isoformat(),"completed_at":evaluated_at.isoformat(),
+        "metrics":None
+    }
+    run_result=db.table("model_runs").insert(run_row).execute().data
+    model_run_id=run_result[0]["model_run_id"] if run_result else None
+
+    previous_rows=(db.table("risk_score_history").select("customer_id,risk_score,risk_band,assessed_at")
+                   .order("assessed_at",desc=True).range(0,9999).execute().data or [])
+    previous_by_customer={}
+    for old in previous_rows:
+        previous_by_customer.setdefault(old["customer_id"],old)
+    threshold_rows=db.table("risk_thresholds").select("significant_movement,low_max,moderate_max").eq("name","default").limit(1).execute().data or []
+    threshold=threshold_rows[0] if threshold_rows else {"significant_movement":15,"low_max":29.99,"moderate_max":59.99}
     history_features=[]
     risk_history=[]
+    alert_candidates=[]
     for feature, insight in zip(features, insights):
         history_features.append({
             "customer_id":feature["customer_id"],"calculated_at":evaluated_at.isoformat(),
@@ -124,30 +145,39 @@ def run_pipeline():
             )}
         })
         score=float(insight["churn_risk_score"])
+        band="high" if score>float(threshold["moderate_max"]) else ("moderate" if score>float(threshold["low_max"]) else "low")
+        prior=previous_by_customer.get(feature["customer_id"])
         risk_history.append({
-            "customer_id":feature["customer_id"],"risk_score":score,
-            "risk_band":"high" if score>=60 else ("moderate" if score>=30 else "low"),
+            "customer_id":feature["customer_id"],"risk_score":score,"risk_band":band,
             "primary_risk_driver":insight["primary_churn_driver"],
-            "rules_engine_version":"rules-v1","assessed_at":evaluated_at.isoformat()
+            "rules_engine_version":"rules-v1","assessed_at":evaluated_at.isoformat(),
+            "model_run_id":model_run_id
         })
+        if prior:
+            previous_score=float(prior["risk_score"])
+            worsened=(prior["risk_band"]!="high" and band=="high") or (prior["risk_band"]=="low" and band=="moderate")
+            moved_up=(score-previous_score)>=float(threshold["significant_movement"])
+            if worsened or moved_up:
+                alert_candidates.append({
+                    "customer_id":feature["customer_id"],"alert_type":"band_increased" if worsened else "significant_increase",
+                    "previous_score":previous_score,"current_score":score
+                })
     for batch in range(0,len(history_features),250):
         db.table("customer_feature_history").insert(history_features[batch:batch+250]).execute()
-        db.table("risk_score_history").insert(risk_history[batch:batch+250]).execute()
-
-    version=(db.table("model_versions").select("model_version_id")
-             .eq("version","rules-v1").maybe_single().execute().data or {})
-    run_row={
-        "model_version_id":version.get("model_version_id"),
-        "status":"completed","customers_evaluated":len(features),
-        "records_skipped":max(0,len(customer_ids)-len(features)),"records_failed":0,
-        "execution_duration_ms":int((time.monotonic()-started_clock)*1000),
-        "started_at":started_at.isoformat(),"completed_at":evaluated_at.isoformat(),
-        "metrics":None
-    }
-    db.table("model_runs").insert(run_row).execute()
+    inserted_history=[]
+    for batch in range(0,len(risk_history),250):
+        inserted_history.extend(db.table("risk_score_history").insert(risk_history[batch:batch+250]).execute().data or [])
+    history_id_by_customer={row["customer_id"]:row["risk_history_id"] for row in inserted_history}
+    alerts=[]
+    for item in alert_candidates:
+        alerts.append({**item,"risk_history_id":history_id_by_customer.get(item["customer_id"])})
+    for batch in range(0,len(alerts),250):
+        db.table("risk_alerts").insert(alerts[batch:batch+250]).execute()
     return {"customers_processed":len(features),"insights_written":len(insights),
             "feature_snapshots_written":len(history_features),"risk_snapshots_written":len(risk_history),
-            "rules_engine_version":"rules-v1","execution_duration_ms":run_row["execution_duration_ms"]}
+            "risk_alerts_created":len(alerts),"rules_engine_version":"rules-v1",
+            "model_run_id":model_run_id,"execution_duration_ms":run_row["execution_duration_ms"]}
+
 
 def explain_customer(customer_id):
     from supabase import create_client

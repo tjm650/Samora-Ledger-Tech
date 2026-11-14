@@ -3573,3 +3573,92 @@ body:has(.workspace-sidebar.collapsed) .site-footer {
     display: none;
   }
 }
+
+
+/* Correct compact rail alignment and restore independent vertical navigation scrolling. */
+@media (min-width: 761px) {
+  .workspace-sidebar.collapsed {
+    padding-left: 0;
+    padding-right: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-topline,
+  .workspace-sidebar.collapsed .sidebar-nav,
+  .workspace-sidebar.collapsed .sidebar-user {
+    width: 56px;
+    max-width: 56px;
+    flex: 0 0 auto;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: calc(100vh - 150px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5df transparent;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav::-webkit-scrollbar-thumb {
+    background: #cbd5df;
+    border-radius: 8px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group {
+    width: 100%;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    width: 42px;
+    max-width: 42px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-link {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-user {
+    margin-top: auto;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-topline,
+  .workspace-sidebar.collapsed:hover .sidebar-nav,
+  .workspace-sidebar.collapsed:hover .sidebar-user,
+  .workspace-sidebar.collapsed:focus-within .sidebar-topline,
+  .workspace-sidebar.collapsed:focus-within .sidebar-nav,
+  .workspace-sidebar.collapsed:focus-within .sidebar-user {
+    width: 164px;
+    max-width: 164px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-title,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-title {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-link,
+  .workspace-sidebar.collapsed:focus-within .sidebar-link {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace-sidebar,
+  .workspace-sidebar.collapsed {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

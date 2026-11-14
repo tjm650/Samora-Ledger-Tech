@@ -9,12 +9,14 @@ from analytics import run_pipeline, explain_customer
 from data_seeder import seed as seed_demo_data
 from feature_engineering import router as model_data_router
 from model_training import router as model_training_router
+from development_model_training import router as development_model_training_router
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO"))
 log=logging.getLogger("samora")
 app=FastAPI(title="Samora Ledger Tech API",version="1.3.0")
 app.include_router(model_data_router)
 app.include_router(model_training_router)
+app.include_router(development_model_training_router)
 _OVERVIEW_CACHE:dict[int,tuple[float,dict]]={}
 _OVERVIEW_CACHE_TTL_SECONDS=30
 origins=[x.strip() for x in os.getenv("API_CORS_ORIGINS","http://localhost:3000").split(",") if x.strip()]

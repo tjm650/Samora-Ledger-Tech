@@ -836,10 +836,16 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
   }
 
   .workspace-sidebar.collapsed .sidebar-topline,
-  .workspace-sidebar.collapsed .sidebar-nav,
   .workspace-sidebar.collapsed .sidebar-user {
     width: 56px;
     max-width: 56px;
+    flex: 0 0 auto;
+  }
+
+  /* Use the full 76px closed rail so the active item has equal side clearance. */
+  .workspace-sidebar.collapsed .sidebar-nav {
+    width: 76px;
+    max-width: 76px;
     flex: 0 0 auto;
   }
 

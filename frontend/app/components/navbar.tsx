@@ -8,28 +8,16 @@ import {
  Menu,X,HelpCircle,Settings,RefreshCw,Activity
 } from "lucide-react";
 
-const groups=[
- {label:"Overview",items:[
-  {href:"/",label:"Overview",icon:LayoutDashboard}
- ]},
- {label:"",items:[
-  {href:"/crm",label:"crm",icon:Users}
- ]},
- {label:"Transaction Management",items:[
-  {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight}
- ]},
- {label:"Risk & Controls",items:[
-  {href:"/risk",label:"Risks",icon:ShieldAlert},
-  {href:"/governance",label:"Model governance",icon:Scale}
- ]},
- {label:"Insights & Reporting",items:[
-  {href:"/analytics",label:"Analytics",icon:BarChart3},
-  {href:"/reports",label:"Management reports",icon:FileText}
- ]},
- {label:"",items:[
-  {href:"/help",label:"Help",icon:HelpCircle},
-  {href:"/settings",label:"Settings",icon:Settings}
- ]}
+const navItems=[
+ {href:"/",label:"Overview",icon:LayoutDashboard},
+ {href:"/crm",label:"CRM",icon:Users},
+ {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight},
+ {href:"/risk",label:"Risks",icon:ShieldAlert},
+ {href:"/governance",label:"Model governance",icon:Scale},
+ {href:"/analytics",label:"Analytics",icon:BarChart3},
+ {href:"/reports",label:"Management reports",icon:FileText},
+ {href:"/help",label:"Help",icon:HelpCircle},
+ {href:"/settings",label:"Settings",icon:Settings}
 ];
 
 export default function Navbar(){
@@ -56,10 +44,7 @@ export default function Navbar(){
     <button className="sidebar-close mobile-toggle" type="button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={18}/></button>
    </div>
    <nav className="sidebar-nav">
-    {groups.map(group=><section className="sidebar-group" key={group.label}>
-     {group.label && <h2 className="sidebar-group-title"><span className="sidebar-group-initial" aria-hidden="true">{group.label.trim().charAt(0).toUpperCase()}</span><span className="sidebar-group-full">{group.label}</span></h2>}
-     {group.items.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={item.label} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
-    </section>)}
+    {navItems.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={item.label} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
    </nav>
    <div className="sidebar-user" aria-label="Workspace information">
     <span className="sidebar-user-avatar" aria-hidden="true">S</span>

@@ -231,7 +231,7 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
         while True:
             page = (
                 db.table("transactions")
-                .select("customer_id,timestamp,amount,transaction_type,merchant_category,channel,post_transaction_balance,transaction_status")
+                .select("customer_id,timestamp,amount,transaction_type,merchant_category,channel,post_transaction_balance,transaction_status,data_origin,source_system,import_batch_id")
                 .in_("customer_id", ids).order("timestamp")
                 .range(offset, offset + PAGE_SIZE - 1).execute().data or []
             )
@@ -260,6 +260,7 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
     )
 
     origins = Counter(str(row.get("data_origin") or "unknown") for row in customers)
+    transaction_origins = Counter(str(row.get("data_origin") or "unknown") for row in transactions)
     source_counts = Counter(str(row.get("source_system") or "unspecified") for row in customers)
     invalid_customer_count = sum(1 for row in customers if not row.get("customer_id"))
     issue_specs: list[dict[str, Any]] = []
@@ -291,12 +292,14 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
             "description": "Transactions reference customers absent from the customer source table.",
             "remediation": "Resolve customer keys or quarantine orphan transactions.",
         })
-    if origins.get("mock", 0) or origins.get("synthetic", 0) or origins.get("test", 0):
+    non_imported_customers = sum(origins.values()) - origins.get("imported", 0)
+    non_imported_transactions = sum(transaction_origins.values()) - transaction_origins.get("imported", 0)
+    if non_imported_customers or non_imported_transactions:
         issue_specs.append({
             "rule_code": "NON_PRODUCTION_DATA_ORIGIN", "severity": "warning",
-            "affected_rows": sum(origins.values()) - origins.get("imported", 0),
-            "description": "The customer dataset contains mock, synthetic, test or unclassified source records.",
-            "remediation": "Use only approved imported data for production model training and performance claims.",
+            "affected_rows": non_imported_customers + non_imported_transactions,
+            "description": "Customer or transaction sources contain mock, synthetic, test or unclassified records.",
+            "remediation": "Use only approved imported customer and transaction records for production model training and performance claims.",
         })
     if invalid_customer_count:
         issue_specs.append({
@@ -313,11 +316,12 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
         "customer_count": len(customers),
         "transaction_count": len(transactions),
         "data_origin_counts": dict(origins),
+        "transaction_data_origin_counts": dict(transaction_origins),
         "source_system_counts": dict(source_counts),
         "calculation_quality": calculation_quality,
         "feature_engine_version": FEATURE_ENGINE_VERSION,
         "feature_cutoff": cutoff.isoformat(),
-        "production_training_eligible": bool(origins) and set(origins) == {"imported"} and error_count == 0,
+        "production_training_eligible": bool(origins) and bool(transaction_origins) and set(origins) == {"imported"} and set(transaction_origins) == {"imported"} and error_count == 0,
     }
     quality_run = db.table("data_quality_runs").insert({
         "dataset_name": "customer_behaviour_features",

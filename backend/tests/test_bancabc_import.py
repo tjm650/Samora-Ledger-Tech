@@ -12,6 +12,7 @@ from bancabc_import import (
     build_import_readiness_report,
     _validate_resume_batch,
     build_batch_verification_report,
+    import_to_supabase,
 )
 
 
@@ -396,3 +397,134 @@ def test_batch_verification_reports_missing_batch_without_database_writes():
     )
     assert report["verification_status"] == "not_found"
     assert report["verified"] is False
+
+
+
+@pytest.mark.parametrize(
+    ("failure_table", "commit_before_failure"),
+    [("customers", True), ("transactions", False)],
+)
+def test_partial_import_failure_is_lineaged_and_safely_resumable(
+    monkeypatch, failure_table, commit_before_failure
+):
+    import sys
+    from types import SimpleNamespace
+
+    customer_rows = normalize_customer_rows([customer()], "bancabc_core")
+    customer_ids = {customer_rows[0]["external_customer_ref"]: customer_rows[0]["customer_id"]}
+    transaction_rows = normalize_transaction_rows(
+        [transaction()], "bancabc_core", customer_ids, "USD"
+    )
+    checksum = "d" * 64
+    approval = {
+        "approval_reference": "BANK-APPROVAL-RECOVERY",
+        "approved_by": "Approved Data Owner",
+        "approved_at": "2026-09-30T07:00:00+00:00",
+        "extraction_start": "2026-09-30T22:00:00+00:00",
+        "extraction_end": "2026-10-31T22:00:00+00:00",
+        "customer_count": 1,
+        "transaction_count": 1,
+        "debit_total": "125.5000",
+        "credit_total": "0.0000",
+        "transaction_amount_total": "125.5000",
+        "currency_code": "USD",
+        "file_checksum_sha256": checksum,
+    }
+
+    class FakeQuery:
+        def __init__(self, db, table):
+            self.db, self.table_name = db, table
+            self.operation, self.payload = "select", None
+            self.filters, self.in_filters, self.want_count = {}, {}, False
+
+        def select(self, *_args, **kwargs):
+            self.operation = "select"
+            self.want_count = kwargs.get("count") == "exact"
+            return self
+
+        def in_(self, field, values):
+            self.in_filters[field] = set(values)
+            return self
+
+        def eq(self, field, value):
+            self.filters[field] = value
+            return self
+
+        def limit(self, _value):
+            return self
+
+        def insert(self, payload):
+            self.operation, self.payload = "insert", payload
+            return self
+
+        def update(self, payload):
+            self.operation, self.payload = "update", payload
+            return self
+
+        def execute(self):
+            rows = self.db.tables.setdefault(self.table_name, [])
+            if self.operation == "select":
+                selected = [
+                    row for row in rows
+                    if all(row.get(k) == v for k, v in self.filters.items())
+                    and all(row.get(k) in values for k, values in self.in_filters.items())
+                ]
+                return SimpleNamespace(data=selected, count=len(selected) if self.want_count else None)
+            if self.operation == "insert":
+                payload = self.payload if isinstance(self.payload, list) else [self.payload]
+                should_fail = self.db.failure and self.db.failure[0] == self.table_name and not self.db.failed
+                if should_fail and commit_before_failure:
+                    rows.extend(payload)
+                if should_fail:
+                    self.db.failed = True
+                    raise RuntimeError(f"injected {self.table_name} insert failure")
+                rows.extend(payload)
+                return SimpleNamespace(data=payload, count=None)
+            if self.operation == "update":
+                updated = []
+                for row in rows:
+                    if all(row.get(k) == v for k, v in self.filters.items()):
+                        row.update(self.payload)
+                        updated.append(row)
+                return SimpleNamespace(data=updated, count=None)
+            raise AssertionError("unsupported fake query operation")
+
+    class FakeDB:
+        def __init__(self):
+            self.tables = {"customers": [], "transactions": [], "data_import_batches": []}
+            self.failure = (failure_table, commit_before_failure)
+            self.failed = False
+
+        def table(self, name):
+            return FakeQuery(self, name)
+
+    db = FakeDB()
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-only")
+    monkeypatch.setitem(sys.modules, "supabase", SimpleNamespace(create_client=lambda *_: db))
+
+    with pytest.raises(RuntimeError, match="injected"):
+        import_to_supabase(
+            customer_rows, transaction_rows, checksum, "bancabc_core", "USD",
+            ["customers.csv", "transactions.csv"], approval,
+        )
+
+    batch = db.tables["data_import_batches"][0]
+    assert batch["status"] == "partially_loaded"
+    assert batch["inserted_row_count"] == (
+        len(db.tables["customers"]) + len(db.tables["transactions"])
+    )
+    original_batch_id = batch["import_batch_id"]
+    db.failure = None
+
+    result = import_to_supabase(
+        customer_rows, transaction_rows, checksum, "bancabc_core", "USD",
+        ["customers.csv", "transactions.csv"], approval, original_batch_id,
+    )
+    assert result["status"] == "loaded"
+    assert result["resumed_existing_batch"] is True
+    assert len(db.tables["customers"]) == 1
+    assert len(db.tables["transactions"]) == 1
+    assert db.tables["customers"][0]["import_batch_id"] == original_batch_id
+    assert db.tables["transactions"][0]["import_batch_id"] == original_batch_id
+    assert db.tables["data_import_batches"][0]["status"] == "loaded"

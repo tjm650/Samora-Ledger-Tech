@@ -22,7 +22,7 @@ import pandas as pd
 from fastapi import APIRouter, Header, HTTPException
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import adjusted_rand_score, silhouette_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -402,3 +402,96 @@ def development_segmentation_profile(x_api_key: str | None = Header(default=None
     except Exception as exc:
         log.exception("Development segmentation profiling failed")
         raise HTTPException(500, "Unable to profile the development segmentation model; inspect backend logs") from exc
+
+
+@router.get("/api/v1/model-training/development-segmentation/compare")
+def compare_development_segmentation(x_api_key: str | None = Header(default=None)):
+    """Read-only repeated-seed comparison of K-means cluster counts on mock data."""
+    _authorize(x_api_key)
+    try:
+        db = _database()
+        customers = _all_rows(db, "customers", "customer_id,data_origin")
+        features = _all_rows(
+            db, "customer_features",
+            "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(FEATURE_COLUMNS),
+        )
+        frame = prepare_mock_feature_frame(customers, features)
+        if len(frame) < 30:
+            raise HTTPException(409, "At least 30 quality-passed mock customer feature rows are required.")
+        columns = [column for column in FEATURE_COLUMNS if column in frame and frame[column].notna().any()]
+        if len(columns) < 2:
+            raise HTTPException(409, "At least two populated behavioural features are required.")
+        x = frame[columns]
+        seeds = [7, 21, 42, 84, 126]
+        comparisons = []
+        for k in (2, 3, 4, 5):
+            if k >= len(frame):
+                continue
+            assignments = []
+            silhouettes = []
+            counts_by_seed = []
+            representative_medians = {}
+            for seed in seeds:
+                estimator = Pipeline([
+                    ("imputer", SimpleImputer(strategy="median", add_indicator=True)),
+                    ("scaler", StandardScaler()),
+                    ("clusterer", KMeans(n_clusters=k, random_state=seed, n_init=20)),
+                ])
+                labels = estimator.fit_predict(x)
+                assignments.append(labels)
+                transformed = estimator[:-1].transform(x)
+                if 1 < len(np.unique(labels)) < len(frame):
+                    silhouettes.append(float(silhouette_score(transformed, labels)))
+                counts = np.bincount(labels, minlength=k)
+                counts_by_seed.append(counts)
+                if seed == 42:
+                    profiled = x.copy()
+                    profiled["cluster_id"] = labels
+                    representative_medians = {
+                        str(int(cluster_id)): {
+                            column: round(float(value), 2)
+                            for column, value in group[columns].median(numeric_only=True).items()
+                            if pd.notna(value)
+                        }
+                        for cluster_id, group in profiled.groupby("cluster_id")
+                    }
+            stability = [
+                float(adjusted_rand_score(assignments[i], assignments[j]))
+                for i in range(len(assignments)) for j in range(i + 1, len(assignments))
+            ]
+            representative_counts = counts_by_seed[seeds.index(42)]
+            min_cluster = int(representative_counts.min())
+            comparisons.append({
+                "cluster_count": k,
+                "silhouette_mean": round(float(np.mean(silhouettes)), 4) if silhouettes else None,
+                "silhouette_std": round(float(np.std(silhouettes)), 4) if silhouettes else None,
+                "stability_ari_mean": round(float(np.mean(stability)), 4) if stability else None,
+                "stability_ari_min": round(float(np.min(stability)), 4) if stability else None,
+                "representative_seed": 42,
+                "representative_cluster_sizes": [int(value) for value in representative_counts],
+                "smallest_cluster_share_pct": round(min_cluster / len(frame) * 100, 2),
+                "clusters_below_2pct": int(sum(value / len(frame) < 0.02 for value in representative_counts)),
+                "feature_medians_by_cluster": representative_medians,
+            })
+        return {
+            "status": "completed_read_only_development_comparison",
+            "data_origin": "mock",
+            "customers_evaluated": len(frame),
+            "features_used": columns,
+            "random_seeds": seeds,
+            "comparison": comparisons,
+            "production_eligible": False,
+            "production_approved": False,
+            "not_a_churn_model": True,
+            "interpretation_note": (
+                "Silhouette measures cluster separation, not predictive accuracy. "
+                "Mean pairwise adjusted Rand index (ARI) measures agreement across random seeds; "
+                "it does not establish business validity. Counts and medians use seed 42. "
+                "All comparisons use the same mock snapshot and preprocessing; no records or model registry entries are written."
+            ),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Development segmentation comparison failed")
+        raise HTTPException(500, "Unable to compare development segmentation candidates; inspect backend logs") from exc

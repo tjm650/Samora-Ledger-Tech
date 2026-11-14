@@ -82,3 +82,12 @@ The salary-disruption indicator requires a prior payroll pattern (at least two s
 The pipeline never silently changes the source data or creates churn labels. A dataset containing mock/synthetic/test or unclassified customer origins is flagged as not eligible for production model training. A future-dated transaction is excluded and reported; the feature cutoff is persisted so the same feature state can be reproduced.
 
 Unit tests for cutoff handling, non-posted transaction exclusion, empty customer histories and payroll disruption are in `backend/tests/test_feature_engineering.py`.
+
+
+## BancABC source-data import readiness
+
+A controlled CSV importer is available in `backend/bancabc_import.py`. Its dry-run mode is the default; writing requires an explicit `--apply` flag and locally supplied Supabase service-role credentials. The importer uses stable source-key-derived UUIDs, strict field validation, exact-match replay checks, customer-email collision checks, chunked writes, and `data_import_batches` lineage. It never deletes or relabels mock records.
+
+See `docs/BANCABC_DATA_IMPORT.md` for the data contract, secure execution instructions, reconciliation steps, recovery behavior and known limitations. Header-only templates are provided under `docs/templates/`. Unit tests are in `backend/tests/test_bancabc_import.py`.
+
+The importer is a controlled normalized-CSV workflow, not a direct core-banking connector. No BancABC data has been imported as part of preparing this tooling. Do not use `--apply` until the data owner approves the extract, identity crosswalk, currency and signed control totals.

@@ -54,3 +54,11 @@ The connected database has mock-only customer and feature rows and no verified c
 - Silhouette is a separation diagnostic, not predictive accuracy. ARI is seed-to-seed assignment agreement, not evidence of business validity.
 - The endpoint is read-only: it does not upload artifacts, insert datasets, create model versions/runs/evaluations, alter customer records, or activate a candidate.
 - The Growth Intelligence comparison request is sequenced after the existing profile request to limit concurrent memory use. The comparison table is mock-only and experimental. Candidate results must be reviewed alongside cluster size, stability and business interpretability; no automatic winner is selected.
+
+
+## Derived behavioural feature expansion
+- Development segmentation now derives four additional signals at read time from the existing quality-passed feature snapshot: 90-day net cashflow, 90-day debit-to-credit ratio, 30-day spend trend versus the 90-day monthly run rate, and 7-day activity consistency versus the 30-day run rate.
+- Ratios with zero or missing denominators remain null and are handled by the existing median-imputation pipeline; infinities are converted to null.
+- These are derived model-input features, not new source facts or new database columns. The original source features and customer records are unchanged.
+- The derived feature schema is versioned as customer-behaviour-v2-derived-1. Existing registered artifacts retain their original schema and must not be silently reinterpreted; a new segmentation training run is required to use the expanded schema.
+- This expansion is experimental and mock-only. Feature utility and cluster interpretability must be compared before any production use.

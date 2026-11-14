@@ -647,7 +647,7 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 56px);marg
     position: absolute;
     z-index: -1;
     inset: 0 auto 0 0;
-    width: 188px;
+    width: 240px;
     background: #fff;
     border-right: 1px solid #e5ebef;
     box-shadow: none;

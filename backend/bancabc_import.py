@@ -19,6 +19,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+import pycountry
+
 CUSTOMER_REQUIRED = ("external_customer_ref", "full_name", "email")
 TRANSACTION_REQUIRED = (
     "external_transaction_ref", "external_customer_ref", "timestamp", "amount",
@@ -103,8 +105,6 @@ def normalize_customer_rows(rows: list[dict[str, str]], source_system: str) -> l
             "region_code": row.get("region_code") or None,
             "source_system": source_system,
             "data_origin": "imported",
-            "approval_manifest_validated": approval is not None,
-            "approval_evidence": approval,
         })
     return output
 
@@ -128,8 +128,12 @@ def normalize_transaction_rows(
         if status not in TRANSACTION_STATUSES:
             raise ImportValidationError(f"transactions row {line}: unsupported transaction_status {status}")
         currency = (row.get("currency_code") or default_currency).upper()
-        if not re.fullmatch(r"[A-Z]{3}", currency):
-            raise ImportValidationError(f"transactions row {line}: currency_code must be a 3-letter ISO code")
+        if pycountry.currencies.get(alpha_3=currency) is None:
+            raise ImportValidationError(f"transactions row {line}: currency_code must be a recognised ISO 4217 code")
+        if currency != default_currency.upper():
+            raise ImportValidationError(
+                f"transactions row {line}: currency_code {currency} differs from package currency {default_currency.upper()}"
+            )
         value_date = row.get("value_date") or None
         if value_date:
             try:
@@ -171,8 +175,8 @@ def prepare_import(customers_path: str, transactions_path: str, source_system: s
     if not SOURCE_RE.fullmatch(source_system):
         raise ImportValidationError("source_system must be 2-80 characters: letters, digits, dot, underscore or hyphen")
     currency = currency.upper()
-    if not re.fullmatch(r"[A-Z]{3}", currency):
-        raise ImportValidationError("currency must be a 3-letter ISO code")
+    if pycountry.currencies.get(alpha_3=currency) is None:
+        raise ImportValidationError("currency must be a recognised ISO 4217 code")
     customer_rows = _read_csv(customers_path)
     transaction_rows = _read_csv(transactions_path)
     customers = normalize_customer_rows(customer_rows, source_system)
@@ -352,6 +356,8 @@ def validate_approval_manifest(
         raise ImportValidationError("approval and extraction timestamps must include timezone offsets")
     if extraction_start >= extraction_end:
         raise ImportValidationError("extraction_start must be earlier than extraction_end")
+    if approved_at > extraction_start:
+        raise ImportValidationError("approval timestamp must not be later than extraction_start")
     if manifest["file_checksum_sha256"].lower() != checksum.lower():
         raise ImportValidationError("approval manifest file_checksum_sha256 does not match the supplied CSV files")
     expected_counts = {
@@ -365,8 +371,15 @@ def validate_approval_manifest(
             raise ImportValidationError(f"approval manifest {key} must be an integer") from exc
         if declared != actual:
             raise ImportValidationError(f"approval manifest {key} mismatch: declared {declared}, actual {actual}")
+    if pycountry.currencies.get(alpha_3=currency.upper()) is None:
+        raise ImportValidationError("currency must be a recognised ISO 4217 code")
     totals = {"debit_total": Decimal("0"), "credit_total": Decimal("0")}
     for row in transactions:
+        if row["currency_code"].upper() != currency.upper():
+            raise ImportValidationError("transaction currency differs from approved package currency")
+        transaction_time = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+        if not (extraction_start.astimezone(timezone.utc) <= transaction_time < extraction_end.astimezone(timezone.utc)):
+            raise ImportValidationError("transaction timestamp falls outside the approved extraction window")
         totals["debit_total" if row["transaction_type"] == "Debit" else "credit_total"] += Decimal(row["amount"])
     totals["transaction_amount_total"] = totals["debit_total"] + totals["credit_total"]
     for key, actual in totals.items():
@@ -418,6 +431,7 @@ def main():
             "checksum_sha256": checksum,
             "source_system": args.source_system,
             "data_origin": "imported",
+            "approval_manifest_validated": approval is not None,
         }
         if args.apply:
             summary.update(import_to_supabase(

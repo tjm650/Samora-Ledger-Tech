@@ -11,6 +11,7 @@ from bancabc_import import (
     validate_approval_manifest,
     build_import_readiness_report,
     _validate_resume_batch,
+    build_batch_verification_report,
 )
 
 
@@ -311,3 +312,87 @@ def test_resume_batch_rejects_incompatible_batch(change, message):
     batch.update(change)
     with pytest.raises(ImportValidationError, match=message):
         _validate_resume_batch(batch, "bancabc_core", "USD", "a" * 64, approval)
+
+
+
+def test_batch_verification_requires_exact_rows_values_lineage_and_loaded_status():
+    customers = normalize_customer_rows([customer()], "bancabc_core")
+    customer_ids = {customers[0]["external_customer_ref"]: customers[0]["customer_id"]}
+    transactions = normalize_transaction_rows(
+        [transaction()], "bancabc_core", customer_ids, "USD"
+    )
+    batch_id = "batch-verified"
+    batch_customers = [{**customers[0], "import_batch_id": batch_id}]
+    batch_transactions = [{**transactions[0], "import_batch_id": batch_id}]
+    checksum = "a" * 64
+    approval = {"approval_reference": "BANK-APPROVAL-17", "file_checksum_sha256": checksum}
+    batch = {
+        "import_batch_id": batch_id,
+        "status": "loaded",
+        "source_system": "bancabc_core",
+        "currency_code": "USD",
+        "checksum_sha256": checksum,
+        "source_row_count": 2,
+        "metadata": {
+            "source_customer_rows": 1,
+            "source_transaction_rows": 1,
+            "approval_evidence": approval,
+        },
+    }
+    report = build_batch_verification_report(
+        batch, batch_customers, batch_transactions, customers, transactions,
+        checksum, "bancabc_core", "USD", approval,
+    )
+    assert report["verified"] is True
+    assert report["verification_status"] == "verified"
+    assert report["customers"]["found"] == 1
+    assert report["transactions"]["found"] == 1
+    assert report["read_only"] is True
+
+
+def test_batch_verification_detects_missing_extra_modified_and_wrong_lineage_rows():
+    customers = normalize_customer_rows([customer()], "bancabc_core")
+    customer_ids = {customers[0]["external_customer_ref"]: customers[0]["customer_id"]}
+    transactions = normalize_transaction_rows(
+        [transaction()], "bancabc_core", customer_ids, "USD"
+    )
+    checksum = "b" * 64
+    approval = {"approval_reference": "BANK-APPROVAL-18", "file_checksum_sha256": checksum}
+    batch_id = "batch-incomplete"
+    altered_customer = {**customers[0], "full_name": "Altered Name", "import_batch_id": "other-batch"}
+    extra_customer = {**customers[0], "customer_id": "unexpected-id", "import_batch_id": batch_id}
+    batch = {
+        "import_batch_id": batch_id,
+        "status": "partially_loaded",
+        "source_system": "bancabc_core",
+        "currency_code": "USD",
+        "checksum_sha256": checksum,
+        "source_row_count": 2,
+        "metadata": {
+            "source_customer_rows": 1,
+            "source_transaction_rows": 1,
+            "approval_evidence": approval,
+        },
+    }
+    report = build_batch_verification_report(
+        batch, [altered_customer, extra_customer], [], customers, transactions,
+        checksum, "bancabc_core", "USD", approval,
+    )
+    assert report["verified"] is False
+    assert "customer_missing_rows" in report["errors"]
+    assert "customer_unexpected_rows" in report["errors"]
+    assert "customer_source_value_mismatches" in report["errors"]
+    assert "customer_lineage_mismatches" in report["errors"]
+    assert "transaction_missing_rows" in report["errors"]
+    assert "batch_not_marked_loaded" in report["errors"]
+
+
+def test_batch_verification_reports_missing_batch_without_database_writes():
+    customers = normalize_customer_rows([customer()], "bancabc_core")
+    checksum = "c" * 64
+    approval = {"approval_reference": "BANK-APPROVAL-19", "file_checksum_sha256": checksum}
+    report = build_batch_verification_report(
+        None, [], [], customers, [], checksum, "bancabc_core", "USD", approval
+    )
+    assert report["verification_status"] == "not_found"
+    assert report["verified"] is False

@@ -382,7 +382,9 @@ def development_segmentation_profile(x_api_key: str | None = Header(default=None
         if not callable(getattr(model.get("estimator"), "predict", None)):
             raise HTTPException(409, "The registered segmentation artifact is missing a valid estimator.")
         customers = _all_rows(db, "customers", "customer_id,data_origin")
-        features = _all_rows(db, "customer_features", "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(columns))
+        # Derived signals are calculated in memory from persisted base features;
+# they are deliberately not database columns.
+features = _all_rows(db, "customer_features", "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(BASE_FEATURE_COLUMNS))
         frame = prepare_mock_feature_frame(customers, features)
         if frame.empty:
             raise HTTPException(409, "No quality-passed mock feature rows are available for this model.")

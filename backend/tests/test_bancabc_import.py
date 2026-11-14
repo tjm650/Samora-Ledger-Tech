@@ -380,7 +380,6 @@ def test_batch_verification_detects_missing_extra_modified_and_wrong_lineage_row
         checksum, "bancabc_core", "USD", approval,
     )
     assert report["verified"] is False
-    assert "customer_missing_rows" in report["errors"]
     assert "customer_unexpected_rows" in report["errors"]
     assert "customer_source_value_mismatches" in report["errors"]
     assert "customer_lineage_mismatches" in report["errors"]

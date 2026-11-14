@@ -2,6 +2,7 @@
 
 import {useEffect,useState} from "react";
 import {RefreshCw,Users,AlertTriangle,Info} from "lucide-react";
+import DevelopmentSegmentationComparison from "./development-segmentation-comparison";
 
 type Segment={
   cluster_id:number;segment_name:string;customer_count:number;share_pct:number;
@@ -62,6 +63,7 @@ export default function DevelopmentSegmentProfiles(){
         </article>)}
       </div>
       <p className="governance-note">{profile.interpretation_note} The smallest clusters are flagged for manual statistical review; no customer identities or individual assignments are displayed.</p>
+      <DevelopmentSegmentationComparison />
     </>}
   </section>;
 }

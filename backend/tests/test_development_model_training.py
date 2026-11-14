@@ -25,6 +25,10 @@ def test_mock_segmentation_frame_only_uses_mock_customers_and_passed_features():
     frame = prepare_mock_feature_frame(customers, features)
     assert frame["customer_id"].tolist() == ["mock-1"]
     assert frame.loc[0, "recency_days"] == 12
+    assert frame.loc[0, "net_cashflow_90d"] == -120
+    assert "debit_to_credit_ratio_90d" in frame.columns
+    assert "monthly_spend_trend_30d_vs_90d" in frame.columns
+    assert "activity_consistency_7d_vs_30d" in frame.columns
     assert "customer_id" in frame.columns
 
 

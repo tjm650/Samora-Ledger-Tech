@@ -965,18 +965,46 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
   }
 }
 
-/* Keep the active icon centered in the compact desktop navigation rail. */
+/* Active navigation item: centered in the compact rail, padded when expanded. */
 @media (min-width: 761px) {
+  /* Closed rail: the orange active surface and icon share the same centre. */
   .workspace-sidebar.collapsed .sidebar-link.active {
+    width: 36px;
+    min-width: 36px;
+    height: 42px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
     border-left: 0;
-    padding-left: 0;
-    padding-right: 0;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 0;
   }
 
   .workspace-sidebar.collapsed .sidebar-link.active svg {
-    margin-left: auto;
-    margin-right: auto;
+    display: block;
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+  }
+
+  /* Expanded rail: align the icon with the label and retain side breathing room. */
+  .workspace-sidebar.collapsed:not(.nav-dismissed):hover .sidebar-link.active,
+  .workspace-sidebar.collapsed:not(.nav-dismissed):focus-within .sidebar-link.active {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0 12px;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .workspace-sidebar.collapsed:not(.nav-dismissed):hover .sidebar-link.active svg,
+  .workspace-sidebar.collapsed:not(.nav-dismissed):focus-within .sidebar-link.active svg {
+    margin: 0;
   }
 }
 

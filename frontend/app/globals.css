@@ -620,3 +620,364 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
 .risk-driver-label strong{color:#0b1d34;font-variant-numeric:tabular-nums}
 .risk-driver-track{height:7px;overflow:hidden;border-radius:99px;background:#edf1f5}
 .risk-driver-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0b1d34,#f4b335)}
+
+
+/* Desktop sidebar: fixed icon rail with a restrained hover-open panel */
+@media (min-width:761px) {
+  .workspace-sidebar.collapsed {
+    position: fixed;
+    left: 0;
+    top: 76px;
+    bottom: 0;
+    width: 76px !important;
+    min-width: 76px !important;
+    max-width: 76px !important;
+    padding: 24px 10px 28px;
+    overflow: visible;
+    z-index: 60;
+    background: transparent;
+    border-right: 0;
+    box-shadow: none;
+    transition: none;
+    isolation: isolate;
+  }
+
+  .workspace-sidebar.collapsed::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0 auto 0 0;
+    width: 188px;
+    background: #fff;
+    border-right: 1px solid #e5ebef;
+    box-shadow: none;
+    clip-path: inset(0 112px 0 0);
+    transition: clip-path .18s ease, box-shadow .18s ease;
+  }
+
+  .workspace-sidebar.collapsed:hover::before,
+  .workspace-sidebar.collapsed:focus-within::before {
+    clip-path: inset(0 0 0 0);
+    box-shadow: 8px 0 24px rgba(11, 29, 52, .10);
+  }
+
+  .workspace-sidebar.collapsed .sidebar-topline,
+  .workspace-sidebar.collapsed .sidebar-nav,
+  .workspace-sidebar.collapsed .sidebar-user {
+    width: 164px;
+    max-width: 164px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-topline {
+    height: 38px;
+    justify-content: center;
+    padding: 0 0 17px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group {
+    align-items: center;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-link {
+    width: 42px;
+    min-width: 42px;
+    justify-content: center;
+    gap: 12px;
+    padding: 0;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-link span,
+  .workspace-sidebar.collapsed .sidebar-section-label,
+  .workspace-sidebar.collapsed .sidebar-group-title,
+  .workspace-sidebar.collapsed .sidebar-user-copy {
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: none;
+    transition: opacity .14s ease, visibility 0s linear .14s;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    max-height: 0;
+    margin: 0;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-user {
+    width: 164px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 15px 4px 5px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-topline,
+  .workspace-sidebar.collapsed:focus-within .sidebar-topline {
+    justify-content: flex-start;
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group {
+    align-items: stretch;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-link,
+  .workspace-sidebar.collapsed:focus-within .sidebar-link {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    padding: 0 11px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-link span,
+  .workspace-sidebar.collapsed:hover .sidebar-section-label,
+  .workspace-sidebar.collapsed:hover .sidebar-group-title,
+  .workspace-sidebar.collapsed:hover .sidebar-user-copy,
+  .workspace-sidebar.collapsed:focus-within .sidebar-link span,
+  .workspace-sidebar.collapsed:focus-within .sidebar-section-label,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-title,
+  .workspace-sidebar.collapsed:focus-within .sidebar-user-copy {
+    opacity: 1;
+    visibility: visible;
+    max-width: 150px;
+    transition: opacity .16s ease .03s, visibility 0s;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-title,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-title {
+    max-height: 20px;
+    margin: 0 10px 6px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-user,
+  .workspace-sidebar.collapsed:focus-within .sidebar-user {
+    justify-content: flex-start;
+    padding: 15px 8px 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-sidebar.collapsed::before,
+  .workspace-sidebar.collapsed *,
+  .workspace-sidebar.collapsed *::before,
+  .workspace-sidebar.collapsed *::after {
+    transition: none !important;
+  }
+}
+
+/* Keep section initials visible in the compact desktop navigation rail. */
+@media (min-width: 761px) {
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    display: block;
+    width: 42px;
+    max-width: 42px;
+    max-height: 20px;
+    margin: 0 0 6px;
+    opacity: 1;
+    visibility: visible;
+    overflow: hidden;
+    text-align: center;
+    line-height: 16px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-full {
+    display: none;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-initial {
+    display: inline;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-title,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-title {
+    width: auto;
+    max-width: 150px;
+    text-align: left;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-full,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-full {
+    display: inline;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-initial,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-initial {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    display: block;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-full {
+    display: inline;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-initial {
+    display: none;
+  }
+}
+
+
+/* Correct compact rail alignment and restore independent vertical navigation scrolling. */
+@media (min-width: 761px) {
+  .workspace-sidebar.collapsed {
+    padding-left: 0;
+    padding-right: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-topline,
+  .workspace-sidebar.collapsed .sidebar-nav,
+  .workspace-sidebar.collapsed .sidebar-user {
+    width: 56px;
+    max-width: 56px;
+    flex: 0 0 auto;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: calc(100vh - 150px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5df transparent;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav::-webkit-scrollbar-thumb {
+    background: #cbd5df;
+    border-radius: 8px;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group {
+    width: 100%;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-group-title {
+    width: 42px;
+    max-width: 42px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-link {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-user {
+    margin-top: auto;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-topline,
+  .workspace-sidebar.collapsed:hover .sidebar-nav,
+  .workspace-sidebar.collapsed:hover .sidebar-user,
+  .workspace-sidebar.collapsed:focus-within .sidebar-topline,
+  .workspace-sidebar.collapsed:focus-within .sidebar-nav,
+  .workspace-sidebar.collapsed:focus-within .sidebar-user {
+    width: 164px;
+    max-width: 164px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-group-title,
+  .workspace-sidebar.collapsed:focus-within .sidebar-group-title {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-link,
+  .workspace-sidebar.collapsed:focus-within .sidebar-link {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace-sidebar,
+  .workspace-sidebar.collapsed {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+
+/* Final compact-rail spacing and scrollbar refinements */
+@media (min-width: 761px) {
+  .workspace-sidebar.collapsed {
+    padding-top: 0;
+    padding-bottom: 20px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* The former desktop open/close control row is no longer needed. */
+  .workspace-sidebar.collapsed .sidebar-topline {
+    display: none;
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav {
+    gap: 8px;
+    padding-top: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* Keep the original larger separation before Help and Settings. */
+  .workspace-sidebar.collapsed .sidebar-link:nth-child(9),
+  .workspace-sidebar.collapsed .sidebar-link:nth-child(10) {
+    margin-top: 7px;
+  }
+
+  /* A narrower link footprint reduces the closed rail's side padding. */
+  .workspace-sidebar.collapsed .sidebar-link {
+    width: 36px;
+    min-width: 36px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-link,
+  .workspace-sidebar.collapsed:focus-within .sidebar-link {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Keep navigation scrollable on small screens without showing a scrollbar. */
+@media (max-width: 760px) {
+  .workspace-sidebar,
+  .workspace-sidebar.collapsed {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .workspace-sidebar::-webkit-scrollbar,
+  .workspace-sidebar.collapsed::-webkit-scrollbar,
+  .workspace-sidebar .sidebar-nav::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

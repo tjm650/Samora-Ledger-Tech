@@ -30,6 +30,9 @@ def test_mock_segmentation_frame_only_uses_mock_customers_and_passed_features():
     assert "debit_to_credit_ratio_90d" in frame.columns
     assert "monthly_spend_trend_30d_vs_90d" in frame.columns
     assert "activity_consistency_7d_vs_30d" in frame.columns
+    # Optional source features remain in the schema as NaN when unpopulated.
+    assert "frequency_180d" in frame.columns
+    assert pd.isna(frame.loc[0, "frequency_180d"])
     assert "customer_id" in frame.columns
 
 

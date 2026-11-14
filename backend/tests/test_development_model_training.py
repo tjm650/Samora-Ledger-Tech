@@ -1,6 +1,12 @@
 import pandas as pd
 
-from development_model_training import prepare_mock_feature_frame
+from fastapi import HTTPException
+import pytest
+
+from development_model_training import (
+    _verify_profile_artifact_checksum,
+    prepare_mock_feature_frame,
+)
 
 
 def test_mock_segmentation_frame_only_uses_mock_customers_and_passed_features():
@@ -46,3 +52,25 @@ def test_small_segment_is_flagged_in_interpretation():
     overall = {"frequency_30d": 20}
     _, summary, _ = _segment_interpretation(profile, overall, 7, 1000)
     assert "very small cluster" in summary
+
+
+
+def test_profile_artifact_checksum_accepts_matching_artifact():
+    from hashlib import sha256
+
+    artifact = b"trusted model artifact"
+    _verify_profile_artifact_checksum(artifact, sha256(artifact).hexdigest())
+
+
+def test_profile_artifact_checksum_rejects_modified_artifact():
+    with pytest.raises(HTTPException) as exc:
+        _verify_profile_artifact_checksum(b"modified artifact", "0" * 64)
+
+    assert exc.value.status_code == 409
+
+
+def test_profile_artifact_checksum_rejects_missing_checksum():
+    with pytest.raises(HTTPException) as exc:
+        _verify_profile_artifact_checksum(b"artifact", None)
+
+    assert exc.value.status_code == 409

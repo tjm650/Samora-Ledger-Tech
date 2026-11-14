@@ -10,9 +10,17 @@ type Candidate={
   representative_cluster_sizes:number[];smallest_cluster_share_pct:number;
   clusters_below_2pct:number;
 };
+type FeatureSetCandidate={
+  feature_set:string;features_used:string[];cluster_count:number;
+  silhouette_mean:number|null;silhouette_std:number|null;
+  stability_ari_mean:number|null;stability_ari_min:number|null;
+  representative_cluster_sizes:number[];smallest_cluster_share_pct:number;
+  clusters_below_2pct:number;
+};
 type Comparison={
   status:string;customers_evaluated:number;random_seeds:number[];
-  comparison:Candidate[];interpretation_note:string;
+  comparison:Candidate[];feature_set_comparison:FeatureSetCandidate[];
+  interpretation_note:string;
 };
 const fmt=(value:number|null|undefined)=>value==null?"—":value.toFixed(3);
 export default function DevelopmentSegmentationComparison({enabled=true}:{enabled?:boolean}){
@@ -35,7 +43,7 @@ export default function DevelopmentSegmentationComparison({enabled=true}:{enable
       <div><h3 className="panel-title">Cluster-count stability review</h3><p className="panel-caption">Read-only comparison of 2–5 clusters across repeated initialisations</p></div>
       <button className="btn" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/>{loading?"Comparing…":"Refresh comparison"}</button>
     </div>
-    <div className="governance-callout" role="note"><Info size={15}/> Same mock snapshot, feature set and preprocessing for every candidate. Five fixed random seeds per cluster count; no model registry or customer data is changed.</div>
+    <div className="governance-callout" role="note"><Info size={15}/> Same mock snapshot and preprocessing throughout. The review tests cluster counts and directly compares the original base features with the expanded set containing four derived signals. Five fixed random seeds; no model registry or customer data is changed.</div>
     {error&&<div className="governance-callout" role="alert">{error}</div>}
     {loading&&!data?<div className="empty-state">Evaluating cluster-count candidates…</div>:null}
     {data&&<>
@@ -69,6 +77,21 @@ export default function DevelopmentSegmentationComparison({enabled=true}:{enable
             <td>{candidate.representative_cluster_sizes.join(" / ")}</td>
           </tr>)}</tbody>
         </table>
+      </div>
+      <div style={{marginTop:18}}>
+        <div className="panel-heading"><div><h4 className="panel-title">Original vs expanded feature set</h4><p className="panel-caption">Like-for-like comparison at four clusters, using the same customers and five seeds</p></div></div>
+        <div className="table-scroll">
+          <table className="table"><thead><tr><th>Feature set</th><th>Features</th><th>Silhouette mean ± SD</th><th>Stability · ARI</th><th>Smallest cluster</th><th>Seed 42 sizes</th></tr></thead>
+            <tbody>{(data.feature_set_comparison||[]).map(candidate=><tr key={candidate.feature_set}>
+              <td><strong>{candidate.feature_set==="original_base_features"?"Original behavioural features":"Expanded behavioural features"}</strong></td>
+              <td>{candidate.features_used.length}</td>
+              <td>{fmt(candidate.silhouette_mean)} ± {fmt(candidate.silhouette_std)}</td>
+              <td>{fmt(candidate.stability_ari_mean)} mean · {fmt(candidate.stability_ari_min)} min</td>
+              <td>{candidate.smallest_cluster_share_pct.toFixed(2)}%</td>
+              <td>{candidate.representative_cluster_sizes.join(" / ")}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
       </div>
       <p className="governance-note">{data.customers_evaluated.toLocaleString("en-US")} quality-passed mock customers · Seeds: {data.random_seeds.join(", ")}. {data.interpretation_note}</p>
     </>}

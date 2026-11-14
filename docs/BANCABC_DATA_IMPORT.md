@@ -42,7 +42,7 @@ Optional: \`transaction_status\` (defaults to \`posted\` only when omitted), \`a
 
 From the repository root, install the backend requirements in an isolated environment, then set \`SUPABASE_URL\` and \`SUPABASE_SERVICE_ROLE_KEY\` in that local environment.
 
-Dry-run (validates files and reports row counts/checksum; performs no database writes):
+Dry-run (validates files and emits aggregate reconciliation, branch/status totals and checksum; performs no database writes):
 
 \`\`\`powershell
 python backend/bancabc_import.py \`
@@ -67,11 +67,31 @@ Use the actual currency agreed with BancABC; USD above is an example, not an ass
 
 ## Import behavior and recovery
 
-The script validates all CSV rows before opening a database write. It then checks existing email collisions, creates a \`data_import_batches\` record, and upserts customers and transactions in batches of 250. A successful import marks the batch \`loaded\`; an interrupted import records \`partially_loaded\` or \`failed\` with counts and an error summary.
+The importer checks existing email collisions and source-key records before creating a `data_import_batches` record. New customer and transaction rows are inserted in chunks of 250. A successful import marks the batch `loaded`; an interrupted import records `partially_loaded` or `failed` when the status update succeeds.
 
-The import is idempotent by deterministic primary keys, but the batch itself is an execution record. If a batch is interrupted, inspect the batch and row lineage before retrying. Do not delete a partially loaded batch without a data-owner-approved recovery plan.
+The Supabase REST API writes chunks separately; this is not a single cross-table database transaction. A failed batch may therefore contain committed chunks. Do not delete a partially loaded batch or start a fresh import with the same source keys.
 
-The current implementation uses the Supabase REST API in chunks, not a single cross-table database transaction. A failed batch may therefore contain committed chunks; the batch status and \`import_batch_id\` are the recovery boundary. Re-running the same source keys will upsert the same records and attach them to the new batch, so review lineage carefully before retrying.
+Recovery is explicit:
+1. Inspect the original `data_import_batches` row and the `import_batch_id` values on customer and transaction rows.
+2. Confirm the original batch is `validating`, `partially_loaded` or `failed`, and that its source system, currency, checksum and approval reference match the exact package.
+3. Re-run the same unchanged CSV files and approval manifest with `--resume-batch-id <ORIGINAL_IMPORT_BATCH_UUID> --apply`.
+4. The importer refuses recovery if any existing identical row is not linked to that original batch. It inserts only missing rows, verifies the final customer and transaction row counts linked to the original batch, then marks that same batch `loaded`.
+5. If a process stopped after a database chunk committed but before its response was received, the next run detects those rows by deterministic ID and confirms their original batch lineage before continuing.
+
+Example recovery command:
+
+```powershell
+python backend/bancabc_import.py `
+  --customers .\\approved\\bancabc_customers.csv `
+  --transactions .\\approved\\bancabc_transactions.csv `
+  --source-system bancabc_core_banking `
+  --currency USD `
+  --approval-manifest .\\approved\\bancabc_approval_manifest.json `
+  --resume-batch-id <ORIGINAL_IMPORT_BATCH_UUID> `
+  --apply
+```
+
+A new import without `--resume-batch-id` is rejected if any identical source records already exist, preventing a second batch from claiming incomplete lineage. If batch state or lineage is ambiguous, stop and investigate manually; do not retry blindly.
 
 ## After import
 

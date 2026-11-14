@@ -12,5 +12,7 @@ services:
         value: https://gxctcjhxajjhpaayiofq.supabase.co
       - key: API_KEY
         generateValue: true
+      - key: DEMO_PUBLIC_READS
+        value: "true"
       - key: API_CORS_ORIGINS
         value: https://samora-ledger-tech-tinotendajmuyambo.vercel.app

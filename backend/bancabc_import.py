@@ -244,10 +244,16 @@ def _validate_resume_batch(batch, source_system, currency, checksum, approval_ev
         raise ImportValidationError("resume batch checksum does not match the exact CSV files")
     metadata = batch.get("metadata") or {}
     previous_approval = metadata.get("approval_evidence") or {}
-    if previous_approval.get("approval_reference") != (approval_evidence or {}).get("approval_reference"):
-        raise ImportValidationError("resume batch approval reference does not match the validated manifest")
-    if previous_approval.get("file_checksum_sha256") != checksum:
-        raise ImportValidationError("resume batch does not contain matching approval checksum evidence")
+    approval_fields = (
+        "approval_reference", "approved_by", "approved_at", "extraction_start",
+        "extraction_end", "customer_count", "transaction_count", "debit_total",
+        "credit_total", "transaction_amount_total", "currency_code", "file_checksum_sha256",
+    )
+    for field in approval_fields:
+        if previous_approval.get(field) != (approval_evidence or {}).get(field):
+            raise ImportValidationError(
+                f"resume batch approval evidence does not match the validated manifest ({field})"
+            )
     return metadata
 
 
@@ -622,10 +628,13 @@ def build_batch_verification_report(
         errors.append("checksum_mismatch")
     metadata = batch.get("metadata") or {}
     evidence = metadata.get("approval_evidence") or {}
-    if evidence.get("approval_reference") != approval.get("approval_reference"):
-        errors.append("approval_reference_mismatch")
-    if evidence.get("file_checksum_sha256") != checksum:
-        errors.append("approval_checksum_mismatch")
+    approval_fields = (
+        "approval_reference", "approved_by", "approved_at", "extraction_start",
+        "extraction_end", "customer_count", "transaction_count", "debit_total",
+        "credit_total", "transaction_amount_total", "currency_code", "file_checksum_sha256",
+    )
+    if any(evidence.get(field) != approval.get(field) for field in approval_fields):
+        errors.append("approval_evidence_mismatch")
 
     customer_fields = [
         "external_customer_ref", "full_name", "email", "account_tier", "customer_type",

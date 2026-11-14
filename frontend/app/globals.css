@@ -3696,8 +3696,8 @@ body:has(.workspace-sidebar.collapsed) .site-footer {
   }
 
   /* Keep the original larger separation before Help and Settings. */
-  .workspace-sidebar.collapsed .sidebar-link:nth-child(8),
-  .workspace-sidebar.collapsed .sidebar-link:nth-child(9) {
+  .workspace-sidebar.collapsed .sidebar-link:nth-child(9),
+  .workspace-sidebar.collapsed .sidebar-link:nth-child(10) {
     margin-top: 7px;
   }
 

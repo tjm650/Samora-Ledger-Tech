@@ -565,6 +565,43 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
         log.exception("Development segmentation comparison failed")
         raise HTTPException(500, "Unable to compare development segmentation candidates; inspect backend logs") from exc
 
+
+def _compare_temporal_assignments(
+    predicted: dict[str, dict[str, int]], ordered_stamps: list[str], minimum_overlap: int = 30,
+) -> list[dict[str, Any]]:
+    """Compare frozen-model assignments for customers shared by adjacent snapshots."""
+    comparisons = []
+    for index in range(1, len(ordered_stamps)):
+        previous_stamp, current_stamp = ordered_stamps[index - 1], ordered_stamps[index]
+        if previous_stamp not in predicted or current_stamp not in predicted:
+            continue
+        previous, current = predicted[previous_stamp], predicted[current_stamp]
+        overlap = sorted(set(previous) & set(current))
+        if len(overlap) < minimum_overlap:
+            comparisons.append({
+                "from_snapshot": previous_stamp, "to_snapshot": current_stamp,
+                "overlapping_customers": len(overlap), "status": "insufficient_overlap",
+                "adjusted_rand_index": None,
+            })
+            continue
+        previous_labels = [previous[cid] for cid in overlap]
+        current_labels = [current[cid] for cid in overlap]
+        comparisons.append({
+            "from_snapshot": previous_stamp, "to_snapshot": current_stamp,
+            "overlapping_customers": len(overlap), "status": "evaluated",
+            "adjusted_rand_index": round(float(adjusted_rand_score(previous_labels, current_labels)), 4),
+            "from_cluster_shares_pct": {
+                str(cluster): round(previous_labels.count(cluster) / len(overlap) * 100, 1)
+                for cluster in sorted(set(previous_labels))
+            },
+            "to_cluster_shares_pct": {
+                str(cluster): round(current_labels.count(cluster) / len(overlap) * 100, 1)
+                for cluster in sorted(set(current_labels))
+            },
+        })
+    return comparisons
+
+
 @router.get("/api/v1/model-training/development-segmentation/temporal-stability")
 def development_segmentation_temporal_stability(x_api_key: str | None = Header(default=None)):
     """Read-only same-artifact stability review across historical mock feature snapshots."""
@@ -657,35 +694,7 @@ def development_segmentation_temporal_stability(x_api_key: str | None = Header(d
             }
             snapshot_sizes.append({"snapshot_at": stamp, "customers_profiled": len(frame)})
 
-        comparisons = []
-        for index in range(1, len(ordered)):
-            previous_stamp, current_stamp = ordered[index - 1][0], ordered[index][0]
-            if previous_stamp not in predicted or current_stamp not in predicted:
-                continue
-            previous, current = predicted[previous_stamp], predicted[current_stamp]
-            overlap = sorted(set(previous) & set(current))
-            if len(overlap) < 30:
-                comparisons.append({
-                    "from_snapshot": previous_stamp, "to_snapshot": current_stamp,
-                    "overlapping_customers": len(overlap), "status": "insufficient_overlap",
-                    "adjusted_rand_index": None,
-                })
-                continue
-            previous_labels = [previous[cid] for cid in overlap]
-            current_labels = [current[cid] for cid in overlap]
-            comparisons.append({
-                "from_snapshot": previous_stamp, "to_snapshot": current_stamp,
-                "overlapping_customers": len(overlap), "status": "evaluated",
-                "adjusted_rand_index": round(float(adjusted_rand_score(previous_labels, current_labels)), 4),
-                "from_cluster_shares_pct": {
-                    str(cluster): round(previous_labels.count(cluster) / len(overlap) * 100, 1)
-                    for cluster in sorted(set(previous_labels))
-                },
-                "to_cluster_shares_pct": {
-                    str(cluster): round(current_labels.count(cluster) / len(overlap) * 100, 1)
-                    for cluster in sorted(set(current_labels))
-                },
-            })
+        comparisons = _compare_temporal_assignments(predicted, [stamp for stamp, _ in ordered])
         evaluated = [item for item in comparisons if item.get("status") == "evaluated"]
         return {
             "status": "completed_read_only_temporal_review" if evaluated else "insufficient_temporal_overlap",

@@ -1,19 +1,31 @@
-# Phase 2 — BancABC Data Onboarding and Validation
+# Phase 2 — Mock-Data Platform Readiness (BancABC Onboarding Deferred)
 
-**Status:** In progress  
+**Status:** In progress — platform readiness using mock data  
 **Phase 1:** Closed — mock-data prototype  
-**Current source-data state:** No approved BancABC exports have been accepted or imported  
+**Current delivery mode:** Mock data only; continue platform development, integration testing and operational readiness  
+**BancABC onboarding:** Deferred until the platform is ready for live production and the approved source package is supplied  
 **Production model state:** No model is approved for production use
 
 ## Objective
 
-Establish a controlled, auditable path for onboarding approved BancABC customer and transaction exports, reconciling them to source-owner control totals, validating provenance and data quality, and only then rebuilding features for business review.
+Make the platform ready for a live-production handover while continuing to use the existing mock dataset. Complete product functionality, API/UI integration, reliability, observability, security and operational checks against mock data. BancABC onboarding is a later release gate: the approved package is expected when the platform is ready for live production, not as a prerequisite for current development.
 
-Engineering work may proceed with synthetic fixtures. No real customer data may be imported until the source owner and authorized project reviewer have completed the approval gate.
+Do not import or request real BancABC records during this mock-data readiness stage. Keep the import pipeline, approval controls and reconciliation tooling implemented and tested, but dormant. When the production-readiness decision is reached, obtain the bank-approved package and independently verify its source-owner approval and control evidence before any import.
+
+## Current delivery mode — mock data only
+
+- Use only the existing synthetic/mock customer and transaction records for ongoing development and demonstrations.
+- Do not block frontend, backend, analytics, model-development or operational-readiness work while waiting for BancABC exports.
+- Keep mock provenance explicit in APIs, dashboards, model manifests and reports; never present mock results as actual BancABC performance.
+- Keep experimental models inactive and not production-approved. Mock-data model diagnostics are for engineering and demonstration only.
+- Do not invoke the importer with `--apply`, create real-data feature snapshots, or mix mock and imported populations.
+- Treat the BancABC approval package and first import as a future production-onboarding workstream after the platform readiness review.
 
 ## Workstreams and exit criteria
 
-### 2.1 Source ownership and export approval
+### 2.1 Future production gate — source ownership and export approval
+
+These items are intentionally deferred and do not block current mock-data platform readiness.
 - [ ] Named BancABC data owner and authorized approver.
 - [ ] Written approval reference covering the exact datasets, purpose, extraction window and permitted use.
 - [ ] Stable source-system identifier and documented source-key semantics.
@@ -21,7 +33,9 @@ Engineering work may proceed with synthetic fixtures. No real customer data may 
 - [ ] Secure transfer and retention procedure agreed.
 - [ ] Customer identity crosswalk approved by the data owner.
 
-### 2.2 Import contract and provenance
+### 2.2 Future production gate — import contract and provenance
+
+The importer contract is implemented and maintained through tests. Production package validation is deferred until the approved export is supplied.
 - [x] Customer and transaction CSV schemas documented.
 - [x] Dry-run is default; database writes require explicit `--apply`.
 - [x] Deterministic source-key identifiers and explicit imported provenance.
@@ -32,7 +46,9 @@ Engineering work may proceed with synthetic fixtures. No real customer data may 
 - [x] Confirm manifest currency codes against the ISO 4217 reference list rather than a three-letter syntax check alone.
 - [ ] Add source-system-specific reconciliation controls where the export provides additional totals (e.g. per branch, account or posting status).
 
-### 2.3 Import execution and reconciliation
+### 2.3 Future production gate — import execution and reconciliation
+
+No import execution is planned during the current mock-data stage.
 - [ ] Run dry-run against approved, securely transferred exports.
 - [ ] Reconcile row counts, debit/credit totals, currency, date range, branch totals, duplicates and customer references to signed source controls.
 - [x] Implement and test idempotency, partial-import recovery, exact batch lineage checks and read-only batch verification before apply.
@@ -40,14 +56,18 @@ Engineering work may proceed with synthetic fixtures. No real customer data may 
 - [ ] Verify import-batch lineage on every imported customer and transaction.
 - [ ] Confirm no mock rows were deleted, relabelled or overwritten.
 
-### 2.4 Data quality and feature rebuild
+### 2.4 Current work — mock-data quality and feature readiness
+
+Continue quality checks, feature engineering and diagnostics against the explicitly marked mock dataset. The imported-only checks below are future production gates.
 - [ ] Run post-import data-quality checks and resolve all blocking errors.
 - [ ] Confirm imported-only population and provenance consistency.
 - [ ] Validate timezone, posting status, reversals, transaction types, currency and monetary precision with source owner.
 - [ ] Rebuild features from approved imported records using a documented cutoff.
 - [ ] Review feature distributions, missingness, negative recency, future-dated rows and outliers.
 
-### 2.5 Business validation and model reassessment
+### 2.5 Current work — product and model readiness on mock data
+
+Continue aggregate profile review, usability validation and model-governance work using mock data. Business validation against BancABC's actual semantics remains a future production gate.
 - [ ] BancABC business owners review segment definitions and aggregate profiles.
 - [ ] Assess whether feature definitions represent bank-specific product and transaction semantics.
 - [ ] Refit segmentation only after data-quality and business review; compare against the mock candidate without carrying over mock interpretations as truth.
@@ -74,6 +94,6 @@ The manifest is a consistency mechanism, not a cryptographic signature. It canno
 - Do not infer churn labels, customer identity matches, currency conversion or missing transaction statuses.
 - Do not expose customer-level segment assignments or use experimental segments for customer contact, credit, fraud, AML, pricing or eligibility decisions.
 
-## Current blocker
+## Production-onboarding handover gate
 
-The repository previously contained only header-only CSV templates, not approved source exports. Therefore Phase 2 can advance through contract hardening and test coverage, but import execution and real-data validation remain blocked until BancABC supplies the approved export package and independently verifiable approval/control evidence.
+The absence of BancABC exports is expected at this stage and is not a blocker to mock-data platform readiness. The approved package will be supplied when the platform is ready for live production. At that point, obtain the actual customer and transaction exports, named source-owner approval, stable source-system identifier, confirmed currency, extraction window and independently verifiable control totals. Run dry-run and read-only reconciliation first. Only proceed to a controlled database import after explicit project authorization and independent approval verification.

@@ -319,13 +319,19 @@ def _segment_interpretation(profile: dict[str, float], overall: dict[str, float]
         summary += " This is a very small cluster and its profile may be unstable."
     return name, summary, [PROFILE_FEATURES.get(k, k) + (" above" if d == "above" else " below") + " portfolio median" for k, d in signals]
 
+def _verify_profile_artifact_checksum(artifact: bytes, expected_checksum: str | None) -> None:
+    """Reject missing or altered private model artifacts before deserialization."""
+    if not expected_checksum or sha256(artifact).hexdigest() != expected_checksum:
+        raise HTTPException(409, "The registered segmentation artifact failed its integrity check.")
+
+
 @router.get("/api/v1/model-training/development-segmentation/profile")
 def development_segmentation_profile(x_api_key: str | None = Header(default=None)):
     """Return aggregate-only interpretation of the latest mock segmentation run."""
     _authorize(x_api_key)
     try:
         db = _database()
-        versions = (db.table("model_versions").select("model_version_id,training_dataset_id,artifact_uri,algorithm,approval_status,is_active,trained_at,validation_metrics,code_commit_sha")
+        versions = (db.table("model_versions").select("model_version_id,training_dataset_id,artifact_uri,artifact_checksum,algorithm,approval_status,is_active,trained_at,validation_metrics,code_commit_sha")
             .eq("algorithm", "kmeans").eq("approval_status", "experimental")
             .order("trained_at", desc=True).limit(20).execute().data or [])
         version = next((v for v in versions if v.get("training_dataset_id") and str(v.get("artifact_uri", "")).startswith("supabase://")), None)
@@ -340,8 +346,22 @@ def development_segmentation_profile(x_api_key: str | None = Header(default=None
         _, remainder = artifact_uri.split("://", 1)
         bucket, path = remainder.split("/", 1)
         artifact = db.storage.from_(bucket).download(path)
+        _verify_profile_artifact_checksum(artifact, version.get("artifact_checksum"))
         model = joblib.load(BytesIO(artifact))
+        manifest = dataset.get("manifest") or {}
         columns = model.get("feature_columns", [])
+        if (manifest.get("purpose") != "development_only_mock_behavioural_segmentation"
+                or manifest.get("data_origin") != "mock"
+                or manifest.get("production_eligible") is not False
+                or model.get("model_purpose") != "development_only_mock_behavioural_segmentation"
+                or model.get("production_eligible") is not False
+                or model.get("not_a_churn_model") is not True
+                or not columns or columns != dataset.get("feature_columns")
+                or any(column not in FEATURE_COLUMNS for column in columns)
+                or model.get("feature_schema_version") != dataset.get("feature_schema_version")):
+            raise HTTPException(409, "The registered artifact does not match the approved mock-only segmentation contract.")
+        if not callable(getattr(model.get("estimator"), "predict", None)):
+            raise HTTPException(409, "The registered segmentation artifact is missing a valid estimator.")
         customers = _all_rows(db, "customers", "customer_id,data_origin")
         features = _all_rows(db, "customer_features", "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(columns))
         frame = prepare_mock_feature_frame(customers, features)

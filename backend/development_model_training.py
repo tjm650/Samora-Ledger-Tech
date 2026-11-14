@@ -101,7 +101,8 @@ def prepare_mock_feature_frame(customers: list[dict[str, Any]], features: list[d
     frame["activity_consistency_7d_vs_30d"] = frame["frequency_7d"] / expected_weekly.replace(0, np.nan)
     frame[FEATURE_COLUMNS] = frame[FEATURE_COLUMNS].apply(pd.to_numeric, errors="coerce")
     frame = frame.replace([np.inf, -np.inf], np.nan)
-    frame = frame.dropna(axis=1, how="all")
+    # Preserve the complete feature contract; training selects populated columns
+    # separately. Dropping all-null columns here breaks later schema selection.
     return frame
 
 

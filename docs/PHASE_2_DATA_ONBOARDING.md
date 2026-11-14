@@ -29,13 +29,13 @@ Engineering work may proceed with synthetic fixtures. No real customer data may 
 - [x] Manifest counts, debit/credit/combined amount totals, currency, extraction timestamps and exact-file checksum validated before writes.
 - [x] Approval evidence and reconciliation values persisted in import-batch metadata.
 - [ ] Independent review confirms approval reference and control report with BancABC owner.
-- [ ] Confirm manifest currency codes against the ISO 4217 reference list rather than a three-letter syntax check alone.
+- [x] Confirm manifest currency codes against the ISO 4217 reference list rather than a three-letter syntax check alone.
 - [ ] Add source-system-specific reconciliation controls where the export provides additional totals (e.g. per branch, account or posting status).
 
 ### 2.3 Import execution and reconciliation
 - [ ] Run dry-run against approved, securely transferred exports.
 - [ ] Reconcile row counts, debit/credit totals, currency, date range, branch totals, duplicates and customer references to signed source controls.
-- [ ] Review idempotency and partial-import recovery plan before apply.
+- [x] Implement and test idempotency, partial-import recovery, exact batch lineage checks and read-only batch verification before apply.
 - [ ] Execute one controlled import with explicit approval.
 - [ ] Verify import-batch lineage on every imported customer and transaction.
 - [ ] Confirm no mock rows were deleted, relabelled or overwritten.

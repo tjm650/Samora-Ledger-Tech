@@ -62,3 +62,11 @@ The connected database has mock-only customer and feature rows and no verified c
 - These are derived model-input features, not new source facts or new database columns. The original source features and customer records are unchanged.
 - The derived feature schema is versioned as customer-behaviour-v2-derived-1. Existing registered artifacts retain their original schema and must not be silently reinterpreted; a new segmentation training run is required to use the expanded schema.
 - This expansion is experimental and mock-only. Feature utility and cluster interpretability must be compared before any production use.
+## Phase 1 mock segmentation comparison
+
+The development-only comparison endpoint evaluates two questions on the same quality-passed mock customer snapshot:
+
+- Cluster-count diagnostics for k=2, 3, 4 and 5 across five fixed random seeds.
+- A direct original-versus-expanded feature comparison at k=4, using the same preprocessing and seeds. The original set uses the base behavioural features; the expanded set adds net cashflow, debit-to-credit ratio, recent monthly spend trend, and recent activity consistency.
+
+Both comparisons report silhouette separation and pairwise adjusted Rand index (ARI) stability. They are diagnostics of unsupervised structure, not predictive accuracy or proof of business validity. No customer-level assignments are exposed, no model registry records are written by the comparison endpoint, and no candidate is activated.

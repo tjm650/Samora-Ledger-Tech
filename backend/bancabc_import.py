@@ -403,6 +403,68 @@ def validate_approval_manifest(
     }
 
 
+
+def build_import_readiness_report(
+    customers: list[dict[str, Any]],
+    transactions: list[dict[str, Any]],
+    checksum: str,
+    source_system: str,
+    currency: str,
+    approval: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Produce aggregate-only dry-run evidence for source-owner reconciliation."""
+    debit = sum(
+        (Decimal(row["amount"]) for row in transactions if row["transaction_type"] == "Debit"),
+        Decimal("0"),
+    )
+    credit = sum(
+        (Decimal(row["amount"]) for row in transactions if row["transaction_type"] == "Credit"),
+        Decimal("0"),
+    )
+    timestamps = [datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00")) for row in transactions]
+    branch_totals: dict[str, dict[str, Decimal | int]] = {}
+    status_counts = Counter()
+    for row in transactions:
+        branch = str(row.get("branch_code") or "UNSPECIFIED")
+        bucket = branch_totals.setdefault(
+            branch, {"transaction_count": 0, "debit_total": Decimal("0"), "credit_total": Decimal("0")}
+        )
+        bucket["transaction_count"] += 1
+        bucket["debit_total" if row["transaction_type"] == "Debit" else "credit_total"] += Decimal(row["amount"])
+        status_counts[row["transaction_status"]] += 1
+    return {
+        "mode": "dry_run",
+        "readiness": "approval_manifest_validated" if approval else "awaiting_approval_manifest",
+        "source_system": source_system,
+        "currency_code": currency.upper(),
+        "data_origin": "imported",
+        "customers_validated": len(customers),
+        "transactions_validated": len(transactions),
+        "checksum_sha256": checksum,
+        "transaction_time_range_utc": {
+            "start": min(timestamps).isoformat() if timestamps else None,
+            "end": max(timestamps).isoformat() if timestamps else None,
+        },
+        "transaction_status_counts": dict(sorted(status_counts.items())),
+        "source_reconciliation": {
+            "debit_total": str(debit.quantize(Decimal("0.0001"))),
+            "credit_total": str(credit.quantize(Decimal("0.0001"))),
+            "transaction_amount_total": str((debit + credit).quantize(Decimal("0.0001"))),
+            "branch_totals": {
+                branch: {
+                    "transaction_count": int(values["transaction_count"]),
+                    "debit_total": str(values["debit_total"].quantize(Decimal("0.0001"))),
+                    "credit_total": str(values["credit_total"].quantize(Decimal("0.0001"))),
+                }
+                for branch, values in sorted(branch_totals.items())
+            },
+        },
+        "approval_manifest_validated": approval is not None,
+        "approval_reference": approval.get("approval_reference") if approval else None,
+    }
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="Validate or import an approved BancABC CSV export.")
     parser.add_argument("--customers", required=True, help="Customer CSV file")
@@ -424,15 +486,12 @@ def main():
             )
         if args.apply and approval is None:
             raise ImportValidationError("--apply requires --approval-manifest with matching approval and control totals")
-        summary = {
-            "mode": "apply" if args.apply else "dry_run",
-            "customers_validated": len(customers),
-            "transactions_validated": len(transactions),
-            "checksum_sha256": checksum,
-            "source_system": args.source_system,
-            "data_origin": "imported",
-            "approval_manifest_validated": approval is not None,
-        }
+        summary = build_import_readiness_report(
+            customers, transactions, checksum, args.source_system,
+            args.currency.upper(), approval
+        )
+        if args.apply:
+            summary["mode"] = "apply"
         if args.apply:
             summary.update(import_to_supabase(
                 customers, transactions, checksum, args.source_system,

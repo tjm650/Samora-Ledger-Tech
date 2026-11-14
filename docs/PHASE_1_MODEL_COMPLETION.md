@@ -119,3 +119,17 @@ The dashboard exposes aggregate cluster sizes, shares, medians and relative sign
 Phase 1 is complete as a mock-data development and demonstration milestone. The next phase can focus on approved BancABC data onboarding, source reconciliation, business validation of segment definitions and controlled re-evaluation. The current candidate must remain inactive until those gates are satisfied.
 
 The separate supervised churn pipeline must not be treated as trained: the current database has no verified imported churn outcomes, and mock records are excluded by design.
+
+## 7. Formal closure
+
+**Phase 1 status: CLOSED — mock-data prototype.**
+
+Closure verification:
+- Git branch: `main`
+- Verified commit: `3087eaa74a0a54b51c6c44731887f1d5745ead4d`
+- GitHub Actions CI run: [#266 / 43609218278](https://github.com/tjm650/Samora-Ledger-Tech/actions/runs/43609218278)
+- Backend dependency installation, Python compilation and backend test suite: passed.
+- Frontend dependency installation and TypeScript type-check: passed.
+- CI conclusion: `success`.
+
+Temporal stability analysis is explicitly deferred and is not a Phase 1 closure condition. The lack of approved BancABC exports and independent business validation is also recorded as a boundary of this mock-data milestone, not silently treated as completed work. No production approval or activation is implied by closure.

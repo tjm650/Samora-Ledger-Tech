@@ -16,7 +16,8 @@ def test_mock_segmentation_frame_only_uses_mock_customers_and_passed_features():
     ]
     features = [
         {"customer_id": "mock-1", "data_origin": "mock", "feature_quality_status": "passed",
-         "recency_days": 12, "frequency_30d": 8, "monetary_spend_90d": 120.0},
+         "recency_days": 12, "frequency_30d": 8, "monetary_spend_90d": 120.0,
+         "credit_inflow_90d": 0.0, "debit_outflow_90d": 120.0},
         {"customer_id": "imported-1", "data_origin": "imported", "feature_quality_status": "passed",
          "recency_days": 4, "frequency_30d": 30, "monetary_spend_90d": 900.0},
         {"customer_id": "mock-1", "data_origin": "mock", "feature_quality_status": "failed",

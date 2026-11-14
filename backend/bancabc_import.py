@@ -422,10 +422,14 @@ def build_import_readiness_report(
         Decimal("0"),
     )
     timestamps = [datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00")) for row in transactions]
+    branch_by_customer = {
+        row["customer_id"]: str(row.get("branch_code") or "UNSPECIFIED")
+        for row in customers
+    }
     branch_totals: dict[str, dict[str, Decimal | int]] = {}
     status_counts = Counter()
     for row in transactions:
-        branch = str(row.get("branch_code") or "UNSPECIFIED")
+        branch = branch_by_customer.get(row["customer_id"], "UNMAPPED")
         bucket = branch_totals.setdefault(
             branch, {"transaction_count": 0, "debit_total": Decimal("0"), "credit_total": Decimal("0")}
         )

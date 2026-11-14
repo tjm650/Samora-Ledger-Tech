@@ -380,11 +380,25 @@ def import_to_supabase(
         transaction_count = db.table("transactions").select("transaction_id", count="exact").eq(
             "import_batch_id", batch_id
         ).execute().count or 0
-        expected_count = source_customer_count + source_transaction_count
-        if customer_count + transaction_count != expected_count:
+        expected_customer_ids = {row["customer_id"] for row in customers}
+        expected_transaction_ids = {row["transaction_id"] for row in transactions}
+        linked_customer_rows = db.table("customers").select("customer_id").eq(
+            "import_batch_id", batch_id
+        ).execute().data or []
+        linked_transaction_rows = db.table("transactions").select("transaction_id").eq(
+            "import_batch_id", batch_id
+        ).execute().data or []
+        actual_customer_ids = {row["customer_id"] for row in linked_customer_rows}
+        actual_transaction_ids = {row["transaction_id"] for row in linked_transaction_rows}
+        if (
+            customer_count != source_customer_count
+            or transaction_count != source_transaction_count
+            or actual_customer_ids != expected_customer_ids
+            or actual_transaction_ids != expected_transaction_ids
+        ):
             raise ImportValidationError(
-                f"Batch lineage verification failed: expected {expected_count} rows, "
-                f"found {customer_count + transaction_count} linked to batch {batch_id}"
+                "Batch lineage verification failed: exact customer and transaction IDs "
+                "linked to this batch do not match the approved package"
             )
         db.table("data_import_batches").update({
             "status": "loaded",

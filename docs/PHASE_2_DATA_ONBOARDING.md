@@ -74,6 +74,30 @@ Continue aggregate profile review, usability validation and model-governance wor
 - [ ] Keep any real-data model experimental and inactive until independent validation and formal approval.
 - [ ] Define verified outcomes before any supervised churn or propensity training.
 
+### 2.6 Current work — deployed API smoke verification
+
+- [x] Add `scripts/mock_data_smoke_test.py`, a standard-library-only, read-only smoke test for backend health, executive overview, executive transactions, Growth Intelligence overview and development segmentation profile.
+- [x] Require server-side `SAMORA_API_URL` and `SAMORA_API_KEY`; never print credentials or response bodies.
+- [x] Use GET requests only. The script does not seed data, run pipelines, train models, import records or mutate database state.
+- [ ] Run the smoke test against the deployed Render backend using trusted local/server environment variables and record the pass/fail summary.
+- [ ] Resolve any failed endpoint and rerun the complete check.
+
+Run from the repository root:
+
+```bash
+SAMORA_API_URL=https://samora-ledger-analytics-ppsw.onrender.com SAMORA_API_KEY=<server-side-api-key> python scripts/mock_data_smoke_test.py
+```
+
+On PowerShell:
+
+```powershell
+$env:SAMORA_API_URL = "https://samora-ledger-analytics-ppsw.onrender.com"
+$env:SAMORA_API_KEY = "<server-side-api-key>"
+python scripts/mock_data_smoke_test.py
+```
+
+Do not paste the API key into GitHub, chat, shell history shared with others, or committed files. A successful HTTP response proves endpoint availability and JSON shape only; it does not establish business correctness, complete UI rendering, data quality, or production model approval.
+
 ## Import package contract
 
 The controlled package contains:

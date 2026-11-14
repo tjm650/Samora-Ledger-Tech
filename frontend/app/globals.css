@@ -929,7 +929,7 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
     display: none;
     height: 0;
     min-height: 0;
-    padding: 0;
+    padding: 0; 
     margin: 0;
   }
 

@@ -61,3 +61,24 @@ Do not train or report production model performance from these records. First re
 - `20261114130000_model_data_foundation.sql`
 - `20261114131500_model_data_foundation_fk_indexes.sql`
 - `20261114133000_model_feature_contract_and_provenance.sql`
+
+
+## Feature-engineering implementation
+
+The backend now includes `backend/feature_engineering.py` and exposes a protected rebuild endpoint:
+
+`POST /api/v1/model-data/features/rebuild`
+
+Supply the backend `X-API-Key`. The pipeline:
+1. Reads customer, posted transaction and active product ownership data.
+2. Uses one explicit UTC feature cutoff for every customer and every lookback window.
+3. Excludes future-dated and non-posted transactions from feature calculations.
+4. Calculates 7/30/60/90/180-day frequency and monetary windows, cash flows, average transaction value, activity days, channel/category diversity, payroll inflows, salary disruption, balances and product counts.
+5. Writes the current feature row to `customer_features` and an immutable point-in-time snapshot to `customer_feature_history`.
+6. Records data-quality findings in `data_quality_runs` and `data_quality_issues`, and execution metadata in `model_runs`.
+
+The salary-disruption indicator requires a prior payroll pattern (at least two salary credits in the 180-day lookback) and a gap greater than 35 days. This avoids treating a single salary-labelled credit as a reliable payroll baseline.
+
+The pipeline never silently changes the source data or creates churn labels. A dataset containing mock/synthetic/test or unclassified customer origins is flagged as not eligible for production model training. A future-dated transaction is excluded and reported; the feature cutoff is persisted so the same feature state can be reproduced.
+
+Unit tests for cutoff handling, non-posted transaction exclusion, empty customer histories and payroll disruption are in `backend/tests/test_feature_engineering.py`.

@@ -70,6 +70,7 @@ The CRM directory and customer profiles are confidential staff functionality. Ex
 ## Model development status
 
 - [Phase 1 model completion record](docs/PHASE_1_MODEL_COMPLETION.md) — mock-data behavioural segmentation scope, candidate diagnostics, model card, acceptance checklist and handoff.
+- [Phase 2 BancABC data onboarding](docs/PHASE_2_DATA_ONBOARDING.md) — source approval, import controls, reconciliation, data-quality and model reassessment gates.
 - [Model data foundation](docs/MODEL_DATA_FOUNDATION.md) and [model training pipeline](docs/MODEL_TRAINING_PIPELINE.md) describe the implementation and governance gates.
 
 ## Model and data limitations

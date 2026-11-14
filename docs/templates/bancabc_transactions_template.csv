@@ -1,0 +1,1 @@
+external_transaction_ref,external_customer_ref,timestamp,amount,transaction_type,merchant_category,channel,post_transaction_balance,transaction_status,account_ref,currency_code,value_date,counterparty_category

@@ -37,8 +37,8 @@ def test_segment_interpretation_uses_relative_portfolio_medians():
     overall = {"frequency_30d": 20, "monetary_spend_90d": 500}
     name, summary, signals = _segment_interpretation(profile, overall, 100, 1000)
     assert name == "Highly active, higher spend"
-    assert "above the portfolio median" in summary
     assert len(signals) == 2
+    assert all("above portfolio median" in signal for signal in signals)
 
 
 def test_small_segment_is_flagged_in_interpretation():

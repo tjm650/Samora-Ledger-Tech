@@ -546,6 +546,7 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
             "features_used": columns,
             "random_seeds": seeds,
             "comparison": comparisons,
+            "feature_set_comparison": feature_set_comparison,
             "production_eligible": False,
             "production_approved": False,
             "not_a_churn_model": True,

@@ -10,6 +10,7 @@ from bancabc_import import (
     stable_id,
     validate_approval_manifest,
     build_import_readiness_report,
+    _validate_resume_batch,
 )
 
 
@@ -269,3 +270,44 @@ def test_approval_manifest_rejects_mismatched_source_control_total(tmp_path):
         validate_approval_manifest(
             str(path), customers, transactions, "bancabc_core", "USD", "f" * 64
         )
+
+
+
+def test_resume_batch_requires_matching_source_currency_checksum_and_approval():
+    approval = {"approval_reference": "BANK-APPROVAL-17", "file_checksum_sha256": "a" * 64}
+    batch = {
+        "import_batch_id": "batch-1",
+        "status": "partially_loaded",
+        "source_system": "bancabc_core",
+        "currency_code": "USD",
+        "checksum_sha256": "a" * 64,
+        "metadata": {"approval_evidence": approval},
+    }
+    assert _validate_resume_batch(
+        batch, "bancabc_core", "USD", "a" * 64, approval
+    )["approval_evidence"] == approval
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"status": "loaded"}, "cannot be resumed"),
+        ({"source_system": "other_core"}, "source_system"),
+        ({"currency_code": "ZAR"}, "currency"),
+        ({"checksum_sha256": "b" * 64}, "checksum"),
+        ({"metadata": {"approval_evidence": {"approval_reference": "OTHER", "file_checksum_sha256": "a" * 64}}}, "approval reference"),
+    ],
+)
+def test_resume_batch_rejects_incompatible_batch(change, message):
+    approval = {"approval_reference": "BANK-APPROVAL-17", "file_checksum_sha256": "a" * 64}
+    batch = {
+        "import_batch_id": "batch-1",
+        "status": "partially_loaded",
+        "source_system": "bancabc_core",
+        "currency_code": "USD",
+        "checksum_sha256": "a" * 64,
+        "metadata": {"approval_evidence": approval},
+    }
+    batch.update(change)
+    with pytest.raises(ImportValidationError, match=message):
+        _validate_resume_batch(batch, "bancabc_core", "USD", "a" * 64, approval)

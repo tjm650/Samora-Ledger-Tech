@@ -292,6 +292,14 @@ def import_to_supabase(
     new_transactions = _separate_new_and_identical(
         existing_transactions, transactions, "transaction_id", transaction_fields, "transaction"
     )
+    if not resume_batch_id and (
+        len(new_customers) != source_customer_count
+        or len(new_transactions) != source_transaction_count
+    ):
+        raise ImportValidationError(
+            "Some identical source records already exist. Refusing to create a new batch with incomplete lineage; "
+            "inspect their import_batch_id values and resume the original eligible batch if this is a recovery."
+        )
 
     if resume_batch_id:
         result = (

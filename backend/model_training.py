@@ -126,7 +126,7 @@ def _load_eligible_dataset(db) -> tuple[pd.DataFrame, dict[str, int]]:
     eligible_labels = [
         r for r in outcomes
         if r.get("customer_id") and r.get("data_origin") == "imported"
-        and r.get("label_confidence") == "verified" and r.get("verified_at")
+        and r.get("label_confidence") == "verified" and r.get("verified_at")\n        and r.get("label_definition_version") == LABEL_DEFINITION_VERSION
         and r.get("outcome") in {"churned", "retained"}
         and r.get("outcome_date") and r.get("outcome_window_start")
     ]
@@ -180,7 +180,7 @@ def get_training_readiness() -> dict[str, Any]:
         reasons.append("Both churned and retained outcomes are required.")
     if not os.getenv("MODEL_ARTIFACT_BUCKET"):
         reasons.append("MODEL_ARTIFACT_BUCKET must point to a private Supabase Storage bucket.")
-    if not os.getenv("GIT_COMMIT_SHA"):
+    if not (os.getenv("GIT_COMMIT_SHA") or os.getenv("RENDER_GIT_COMMIT")):
         reasons.append("GIT_COMMIT_SHA should be configured for reproducible model lineage.")
     return {
         "status": "ready" if not reasons else "blocked",
@@ -256,7 +256,7 @@ def run_churn_training() -> dict[str, Any]:
         "eligible_counts": counts,
         "observation_start": str(frame["outcome_date"].min()),
         "observation_end": str(frame["outcome_date"].max()),
-        "code_commit_sha": os.environ["GIT_COMMIT_SHA"],
+        "code_commit_sha": (os.getenv("GIT_COMMIT_SHA") or os.getenv("RENDER_GIT_COMMIT")),
     }
     digest_payload = {
         "manifest": manifest,

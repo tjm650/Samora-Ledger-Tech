@@ -40,10 +40,12 @@ def calculate_customer_features(
     customer_ids: list[str],
     product_counts: dict[str, int] | None = None,
     as_of: datetime | str | None = None,
+    data_origins: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """Calculate leakage-safe behavioural features at a fixed UTC cutoff."""
     cutoff = pd.Timestamp(_utc(as_of))
     product_counts = product_counts or {}
+    data_origins = data_origins or {}
     tx = transactions.copy()
     quality = {
         "input_rows": int(len(tx)),
@@ -159,6 +161,7 @@ def calculate_customer_features(
         feature_status = "passed" if not group.empty else "insufficient_history"
         row = {
             "customer_id": str(customer_id),
+            "data_origin": str(data_origins.get(str(customer_id)) or "unknown").lower(),
             "recency_days": recency,
             "frequency_7d": int(len(w7)),
             "frequency_30d": int(count30),
@@ -203,6 +206,7 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
 
     started = time.monotonic()
     cutoff = _utc(as_of)
+    run_started_at = datetime.now(timezone.utc)
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
@@ -255,8 +259,12 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
         offset += PAGE_SIZE
 
     frame = pd.DataFrame(transactions)
+    customer_origins = {
+        str(row["customer_id"]): str(row.get("data_origin") or "unknown").lower()
+        for row in customers
+    }
     feature_rows, calculation_quality = calculate_customer_features(
-        frame, customer_ids, dict(product_counts), cutoff
+        frame, customer_ids, dict(product_counts), cutoff, customer_origins
     )
 
     origins = Counter(str(row.get("data_origin") or "unknown") for row in customers)
@@ -349,7 +357,7 @@ def run_feature_pipeline(as_of: datetime | str | None = None) -> dict[str, Any]:
         "customers_evaluated": len(customers),
         "records_skipped": 0,
         "records_failed": 0,
-        "started_at": cutoff.isoformat(),
+        "started_at": run_started_at.isoformat(),
         "data_cutoff_at": cutoff.isoformat(),
         "feature_schema_version": FEATURE_SCHEMA_VERSION,
         "environment_name": os.getenv("APP_ENV", "production"),

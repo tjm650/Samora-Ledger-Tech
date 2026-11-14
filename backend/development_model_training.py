@@ -441,7 +441,7 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
                 assignments.append(labels)
                 transformed = estimator[:-1].transform(x)
                 if 1 < len(np.unique(labels)) < len(frame):
-                    silhouettes.append(float(silhouette_score(transformed, labels)))
+                    silhouettes.append(float(silhouette_score(transformed, labels, sample_size=min(500, len(frame)), random_state=42)))
                 counts = np.bincount(labels, minlength=k)
                 counts_by_seed.append(counts)
                 if seed == 42:
@@ -485,7 +485,7 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
             "not_a_churn_model": True,
             "interpretation_note": (
                 "Silhouette measures cluster separation, not predictive accuracy. "
-                "Mean pairwise adjusted Rand index (ARI) measures agreement across random seeds; "
+                "Silhouette uses a fixed sample of up to 500 rows per seed. Mean pairwise adjusted Rand index (ARI) measures agreement across random seeds; "
                 "it does not establish business validity. Counts and medians use seed 42. "
                 "All comparisons use the same mock snapshot and preprocessing; no records or model registry entries are written."
             ),

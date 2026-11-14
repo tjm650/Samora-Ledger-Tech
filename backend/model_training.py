@@ -126,7 +126,8 @@ def _load_eligible_dataset(db) -> tuple[pd.DataFrame, dict[str, int]]:
     eligible_labels = [
         r for r in outcomes
         if r.get("customer_id") and r.get("data_origin") == "imported"
-        and r.get("label_confidence") == "verified" and r.get("verified_at")\n        and r.get("label_definition_version") == LABEL_DEFINITION_VERSION
+        and r.get("label_confidence") == "verified" and r.get("verified_at")
+        and r.get("label_definition_version") == LABEL_DEFINITION_VERSION
         and r.get("outcome") in {"churned", "retained"}
         and r.get("outcome_date") and r.get("outcome_window_start")
     ]

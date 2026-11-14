@@ -24,7 +24,7 @@ import pycountry
 CUSTOMER_REQUIRED = ("external_customer_ref", "full_name", "email")
 TRANSACTION_REQUIRED = (
     "external_transaction_ref", "external_customer_ref", "timestamp", "amount",
-    "transaction_type", "merchant_category", "channel", "post_transaction_balance",
+    "transaction_type", "merchant_category", "channel", "post_transaction_balance", "transaction_status",
 )
 TRANSACTION_TYPES = {"debit": "Debit", "credit": "Credit"}
 TRANSACTION_STATUSES = {"posted", "settled", "completed", "pending", "reversed", "failed"}
@@ -124,7 +124,7 @@ def normalize_transaction_rows(
         kind = TRANSACTION_TYPES.get(row["transaction_type"].casefold())
         if not kind:
             raise ImportValidationError(f"transactions row {line}: transaction_type must be Debit or Credit")
-        status = (row.get("transaction_status") or "posted").casefold()
+        status = row["transaction_status"].casefold()
         if status not in TRANSACTION_STATUSES:
             raise ImportValidationError(f"transactions row {line}: unsupported transaction_status {status}")
         currency = (row.get("currency_code") or default_currency).upper()

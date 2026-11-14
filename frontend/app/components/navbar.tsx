@@ -10,7 +10,7 @@ import {
 
 const navItems=[
  {href:"/",label:"Overview",icon:LayoutDashboard},
- {href:"/assistant",label:"AI Employee",icon:UserRound},
+ {href:"/assistant",label:"Samora Employee",icon:UserRound},
  {href:"/crm",label:"CRM",icon:Users},
  {href:"/transactions",label:"Transaction activity",icon:ArrowLeftRight},
  {href:"/risk",label:"Risks",icon:ShieldAlert},
@@ -34,7 +34,7 @@ export default function Navbar(){
      <span className="brand-mark" aria-hidden="true">S</span>
      <span className="workspace-brand-copy"><span className="brand-name"> SAMORA LEDGER TECH</span></span>
     </Link>
-    <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management","/growth":"Customer Growth Intelligence","/assistant":"AI Employee"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
+    <h1 className="header-page-title">{pathname.startsWith("/customer/") ? "Customer Profile" : pathname === "/" ? "Overview" : ({"/transactions":"Transaction Activity","/risk":"Risk & Exposure","/analytics":"Analytics & Trends","/reports":"Management Reports","/governance":"Model Governance","/help":"Help & Guidance","/settings":"Settings","/crm":"Customer Relationship Management","/growth":"Customer Growth Intelligence","/assistant":"Samora Employee"} as Record<string,string>)[pathname] || "Executive Workspace"}</h1>
    </div>
    <div id="header-actions-slot" className="header-actions-slot" aria-label="Page actions"/>
    {pathname === "/" && <div className="header-actions" aria-label="Executive overview actions"><button className="btn btn-secondary" type="button" onClick={()=>window.dispatchEvent(new Event("samora:refresh-overview"))}><RefreshCw size={14}/>Refresh</button><button className="btn" type="button" onClick={()=>window.dispatchEvent(new Event("samora:run-analytics"))}><Activity size={14}/>Run analytics</button></div>}

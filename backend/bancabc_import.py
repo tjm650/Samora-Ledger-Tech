@@ -15,6 +15,7 @@ import sys
 import uuid
 from collections import Counter
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -63,14 +64,14 @@ def _iso_timestamp(value: str, dataset: str, line: int) -> str:
 
 def _decimal(value: str, field: str, dataset: str, line: int, *, allow_negative: bool = False) -> str:
     try:
-        amount = float(value)
-    except (TypeError, ValueError) as exc:
+        amount = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError) as exc:
         raise ImportValidationError(f"{dataset} row {line}: {field} must be numeric") from exc
-    if amount != amount or amount in (float("inf"), float("-inf")):
+    if not amount.is_finite():
         raise ImportValidationError(f"{dataset} row {line}: {field} must be finite")
     if not allow_negative and amount < 0:
         raise ImportValidationError(f"{dataset} row {line}: {field} cannot be negative")
-    return f"{amount:.4f}"
+    return format(amount.quantize(Decimal("0.0001")), "f")
 
 
 def normalize_customer_rows(rows: list[dict[str, str]], source_system: str) -> list[dict[str, Any]]:
@@ -183,6 +184,45 @@ def _chunks(rows: list[dict[str, Any]], size: int = 250):
         yield rows[start:start + size]
 
 
+def _canonical(value, field):
+    if value is None:
+        return None
+    if field in {"timestamp"}:
+        return _iso_timestamp(str(value), "database", 0)
+    if field in {"amount", "post_transaction_balance"}:
+        return format(Decimal(str(value)).quantize(Decimal("0.0001")), "f")
+    return str(value)
+
+
+def _existing_records(db, table, id_field, rows):
+    existing = {}
+    ids = [row[id_field] for row in rows]
+    for start in range(0, len(ids), 100):
+        result = db.table(table).select("*").in_(id_field, ids[start:start + 100]).execute()
+        for row in result.data or []:
+            existing[row[id_field]] = row
+    return existing
+
+
+def _separate_new_and_identical(existing, incoming, id_field, fields, table):
+    new_rows = []
+    for row in incoming:
+        current = existing.get(row[id_field])
+        if current is None:
+            new_rows.append(row)
+            continue
+        mismatches = [
+            field for field in fields
+            if _canonical(current.get(field), field) != _canonical(row.get(field), field)
+        ]
+        if mismatches:
+            raise ImportValidationError(
+                f"Existing {table} record {row[id_field]} differs from this export "
+                f"({', '.join(mismatches)}). No rows have been written; resolve the source correction explicitly."
+            )
+    return new_rows
+
+
 def import_to_supabase(customers, transactions, checksum, source_system, currency, file_names):
     from supabase import create_client
 
@@ -203,6 +243,24 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
                 "Resolve identity mapping before import; no rows have been written."
             )
 
+    existing_customers = _existing_records(db, "customers", "customer_id", customers)
+    existing_transactions = _existing_records(db, "transactions", "transaction_id", transactions)
+    customer_fields = [
+        "external_customer_ref", "full_name", "email", "account_tier", "customer_type",
+        "relationship_start_date", "branch_code", "region_code", "source_system", "data_origin",
+    ]
+    transaction_fields = [
+        "customer_id", "external_transaction_ref", "timestamp", "amount", "transaction_type",
+        "merchant_category", "channel", "post_transaction_balance", "transaction_status",
+        "account_ref", "currency_code", "value_date", "counterparty_category", "source_system", "data_origin",
+    ]
+    customers = _separate_new_and_identical(
+        existing_customers, customers, "customer_id", customer_fields, "customer"
+    )
+    transactions = _separate_new_and_identical(
+        existing_transactions, transactions, "transaction_id", transaction_fields, "transaction"
+    )
+
     batch = db.table("data_import_batches").insert({
         "source_system": source_system,
         "source_dataset": "BancABC customer and transaction export",
@@ -213,18 +271,18 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
         "source_row_count": len(customers) + len(transactions),
         "checksum_sha256": checksum,
         "schema_version": SCHEMA_VERSION,
-        "metadata": {"customer_rows": len(customers), "transaction_rows": len(transactions), "import_method": "bancabc_csv_v1"},
+        "metadata": {"customer_rows_to_insert": len(customers), "transaction_rows_to_insert": len(transactions), "import_method": "bancabc_csv_v1"},
     }).execute().data[0]
     batch_id = batch["import_batch_id"]
     inserted_customers = inserted_transactions = 0
     try:
         for chunk in _chunks(customers):
             payload = [{**row, "import_batch_id": batch_id} for row in chunk]
-            db.table("customers").upsert(payload, on_conflict="customer_id").execute()
+            db.table("customers").insert(payload).execute()
             inserted_customers += len(payload)
         for chunk in _chunks(transactions):
             payload = [{**row, "import_batch_id": batch_id} for row in chunk]
-            db.table("transactions").upsert(payload, on_conflict="transaction_id").execute()
+            db.table("transactions").insert(payload).execute()
             inserted_transactions += len(payload)
         db.table("data_import_batches").update({
             "status": "loaded",

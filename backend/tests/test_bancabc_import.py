@@ -9,6 +9,7 @@ from bancabc_import import (
     normalize_transaction_rows,
     stable_id,
     validate_approval_manifest,
+    build_import_readiness_report,
 )
 
 
@@ -90,7 +91,7 @@ def test_approval_manifest_must_match_counts_totals_currency_and_checksum(tmp_pa
     manifest = {
         "approval_reference": "DATA-APPROVAL-2026-001",
         "approved_by": "BancABC Data Owner",
-        "approved_at": "2026-11-14T09:00:00+02:00",
+        "approved_at": "2026-09-30T09:00:00+02:00",
         "source_system": "bancabc_core",
         "currency_code": "USD",
         "extraction_start": "2026-10-01T00:00:00+02:00",
@@ -214,3 +215,27 @@ def test_manifest_requires_approval_before_extraction_start(tmp_path):
         validate_approval_manifest(
             str(path), customers, transactions, "bancabc_core", "USD", "d" * 64
         )
+
+
+
+def test_readiness_report_contains_aggregate_reconciliation_and_branch_totals():
+    customer_row = customer()
+    customer_row["branch_code"] = "HARARE-01"
+    customers = normalize_customer_rows([customer_row], "bancabc_core")
+    mapping = {customers[0]["external_customer_ref"]: customers[0]["customer_id"]}
+    debit = transaction()
+    credit = transaction(ref="T-002")
+    credit["transaction_type"] = "credit"
+    credit["amount"] = "50.25"
+    transactions = normalize_transaction_rows(
+        [debit, credit], "bancabc_core", mapping, "USD"
+    )
+    report = build_import_readiness_report(
+        customers, transactions, "e" * 64, "bancabc_core", "USD", None
+    )
+    assert report["readiness"] == "awaiting_approval_manifest"
+    assert report["source_reconciliation"]["debit_total"] == "125.5000"
+    assert report["source_reconciliation"]["credit_total"] == "50.2500"
+    assert report["source_reconciliation"]["transaction_amount_total"] == "175.7500"
+    assert report["source_reconciliation"]["branch_totals"]["HARARE-01"]["transaction_count"] == 2
+    assert report["transaction_status_counts"] == {"posted": 2}

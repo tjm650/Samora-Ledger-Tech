@@ -200,6 +200,23 @@ def _canonical(value, field):
     return str(value)
 
 
+
+def _select_all(db, table, columns="*", filters=None, page_size=1000):
+    """Read every matching row, avoiding PostgREST's default page-size truncation."""
+    output = []
+    start = 0
+    while True:
+        query = db.table(table).select(columns)
+        for field, value in (filters or {}).items():
+            query = query.eq(field, value)
+        page = query.range(start, start + page_size - 1).execute().data or []
+        output.extend(page)
+        if len(page) < page_size:
+            return output
+        start += page_size
+
+
+
 def _existing_records(db, table, id_field, rows):
     existing = {}
     ids = [row[id_field] for row in rows]
@@ -382,12 +399,12 @@ def import_to_supabase(
         ).execute().count or 0
         expected_customer_ids = {row["customer_id"] for row in customers}
         expected_transaction_ids = {row["transaction_id"] for row in transactions}
-        linked_customer_rows = db.table("customers").select("customer_id").eq(
-            "import_batch_id", batch_id
-        ).execute().data or []
-        linked_transaction_rows = db.table("transactions").select("transaction_id").eq(
-            "import_batch_id", batch_id
-        ).execute().data or []
+        linked_customer_rows = _select_all(
+            db, "customers", "customer_id", {"import_batch_id": batch_id}
+        )
+        linked_transaction_rows = _select_all(
+            db, "transactions", "transaction_id", {"import_batch_id": batch_id}
+        )
         actual_customer_ids = {row["customer_id"] for row in linked_customer_rows}
         actual_transaction_ids = {row["transaction_id"] for row in linked_transaction_rows}
         if (
@@ -702,6 +719,27 @@ def build_batch_verification_report(
     batch_status = batch.get("status")
     if batch_status != "loaded":
         errors.append("batch_not_marked_loaded")
+
+    expected_debit = Decimal(approval["debit_total"]).quantize(Decimal("0.0001"))
+    expected_credit = Decimal(approval["credit_total"]).quantize(Decimal("0.0001"))
+    expected_amount = Decimal(approval["transaction_amount_total"]).quantize(Decimal("0.0001"))
+    actual_debit = sum(
+        (Decimal(str(row["amount"])) for row in batch_transactions if row.get("transaction_type") == "Debit"),
+        Decimal("0"),
+    ).quantize(Decimal("0.0001"))
+    actual_credit = sum(
+        (Decimal(str(row["amount"])) for row in batch_transactions if row.get("transaction_type") == "Credit"),
+        Decimal("0"),
+    ).quantize(Decimal("0.0001"))
+    actual_amount = (actual_debit + actual_credit).quantize(Decimal("0.0001"))
+    if actual_debit != expected_debit:
+        errors.append("database_debit_control_total_mismatch")
+    if actual_credit != expected_credit:
+        errors.append("database_credit_control_total_mismatch")
+    if actual_amount != expected_amount:
+        errors.append("database_transaction_amount_control_total_mismatch")
+
+    status_counts = dict(Counter(str(row.get("transaction_status") or "unspecified") for row in batch_transactions))
     verified = not errors
     return {
         "verification_status": "verified" if verified else "mismatch",
@@ -716,6 +754,16 @@ def build_batch_verification_report(
         "transactions": transaction_result,
         "expected_total_rows": expected_total,
         "found_total_rows": len(batch_customers) + len(batch_transactions),
+        "control_totals": {
+            "expected_debit": str(expected_debit),
+            "database_debit": str(actual_debit),
+            "expected_credit": str(expected_credit),
+            "database_credit": str(actual_credit),
+            "expected_transaction_amount": str(expected_amount),
+            "database_transaction_amount": str(actual_amount),
+            "currency_code": currency.upper(),
+        },
+        "transaction_status_counts": status_counts,
         "errors": errors,
         "read_only": True,
     }
@@ -727,10 +775,10 @@ def verify_import_batch(db, batch_id, customers, transactions, checksum, source_
     batch = batch_rows[0] if batch_rows else None
     if not batch:
         return build_batch_verification_report(None, [], [], customers, transactions, checksum, source_system, currency, approval)
-    customer_result = db.table("customers").select("*").eq("import_batch_id", batch_id).execute()
-    transaction_result = db.table("transactions").select("*").eq("import_batch_id", batch_id).execute()
+    batch_customers = _select_all(db, "customers", "*", {"import_batch_id": batch_id})
+    batch_transactions = _select_all(db, "transactions", "*", {"import_batch_id": batch_id})
     return build_batch_verification_report(
-        batch, customer_result.data or [], transaction_result.data or [],
+        batch, batch_customers, batch_transactions,
         customers, transactions, checksum, source_system, currency, approval,
     )
 

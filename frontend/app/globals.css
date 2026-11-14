@@ -3662,3 +3662,71 @@ body:has(.workspace-sidebar.collapsed) .site-footer {
     overscroll-behavior: contain;
   }
 }
+
+
+/* Final compact-rail spacing and scrollbar refinements */
+@media (min-width: 761px) {
+  .workspace-sidebar.collapsed {
+    padding-top: 0;
+    padding-bottom: 20px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* The former desktop open/close control row is no longer needed. */
+  .workspace-sidebar.collapsed .sidebar-topline {
+    display: none;
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav {
+    gap: 8px;
+    padding-top: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .workspace-sidebar.collapsed .sidebar-nav::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* Keep the original larger separation before Help and Settings. */
+  .workspace-sidebar.collapsed .sidebar-link:nth-child(8),
+  .workspace-sidebar.collapsed .sidebar-link:nth-child(9) {
+    margin-top: 7px;
+  }
+
+  /* A narrower link footprint reduces the closed rail's side padding. */
+  .workspace-sidebar.collapsed .sidebar-link {
+    width: 36px;
+    min-width: 36px;
+  }
+
+  .workspace-sidebar.collapsed:hover .sidebar-link,
+  .workspace-sidebar.collapsed:focus-within .sidebar-link {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Keep navigation scrollable on small screens without showing a scrollbar. */
+@media (max-width: 760px) {
+  .workspace-sidebar,
+  .workspace-sidebar.collapsed {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .workspace-sidebar::-webkit-scrollbar,
+  .workspace-sidebar.collapsed::-webkit-scrollbar,
+  .workspace-sidebar .sidebar-nav::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

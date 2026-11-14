@@ -63,7 +63,7 @@ export default function DevelopmentSegmentProfiles(){
         </article>)}
       </div>
       <p className="governance-note">{profile.interpretation_note} The smallest clusters are flagged for manual statistical review; no customer identities or individual assignments are displayed.</p>
-      <DevelopmentSegmentationComparison />
+      <DevelopmentSegmentationComparison enabled={!!profile && !loading} />
     </>}
   </section>;
 }

@@ -394,7 +394,7 @@ body{background:#f4f6f8;color:#1a1a1a}
 .sidebar-section-label,.sidebar-group-title{color:#7c8998;letter-spacing:.14em}
 .sidebar-link{color:#465568;border-radius:6px}
 .sidebar-link:hover{background:#f2f5f8;color:#0b1d34}
-.sidebar-link.active{background:#fff5df;color:#0b1d34; padding-left: 5px;}
+.sidebar-link.active{background:#fff5df;color:#0b1d34;border-left:3px solid #f4b335}
 .sidebar-link.active svg{color:#0b1d34}
 .sidebar-user{border-top:1px solid #e8edf1}
 .sidebar-user-avatar{background:#fff5df;color:#0b1d34;border-color:#f4d78d}

@@ -13,6 +13,7 @@ from bancabc_import import (
     _validate_resume_batch,
     build_batch_verification_report,
     import_to_supabase,
+    _select_all,
 )
 
 
@@ -367,6 +368,9 @@ def test_batch_verification_requires_exact_rows_values_lineage_and_loaded_status
     assert report["verification_status"] == "verified"
     assert report["customers"]["found"] == 1
     assert report["transactions"]["found"] == 1
+    assert report["control_totals"]["database_debit"] == "125.5000"
+    assert report["control_totals"]["database_credit"] == "0.0000"
+    assert report["transaction_status_counts"] == {"posted": 1}
     assert report["read_only"] is True
 
 
@@ -557,3 +561,37 @@ def test_partial_import_failure_is_lineaged_and_safely_resumable(
     assert db.tables["customers"][0]["import_batch_id"] == original_batch_id
     assert db.tables["transactions"][0]["import_batch_id"] == original_batch_id
     assert db.tables["data_import_batches"][0]["status"] == "loaded"
+
+
+
+def test_select_all_reads_past_default_api_page_limit():
+    class Query:
+        def __init__(self, rows):
+            self.rows = rows
+            self.start, self.end = 0, 999
+
+        def select(self, _columns):
+            return self
+
+        def eq(self, _field, _value):
+            return self
+
+        def range(self, start, end):
+            self.start, self.end = start, end
+            return self
+
+        def execute(self):
+            return type("Result", (), {"data": self.rows[self.start:self.end + 1]})()
+
+    class DB:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def table(self, _name):
+            return Query(self.rows)
+
+    rows = [{"id": i} for i in range(2305)]
+    result = _select_all(DB(rows), "transactions", "id", {"import_batch_id": "batch"})
+    assert len(result) == 2305
+    assert result[0]["id"] == 0
+    assert result[-1]["id"] == 2304

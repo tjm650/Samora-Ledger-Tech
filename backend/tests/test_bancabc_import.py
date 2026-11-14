@@ -31,6 +31,7 @@ def transaction(ref="T-001", customer_ref="C-001"):
         "merchant_category": "Groceries",
         "channel": "Mobile",
         "post_transaction_balance": "874.50",
+        "transaction_status": "posted",
     }
 
 
@@ -78,6 +79,15 @@ def test_transaction_is_normalized_with_stable_customer_link_and_utc_time():
     assert rows[0]["timestamp"] == "2026-10-01T08:30:00+00:00"
     assert rows[0]["transaction_type"] == "Debit"
     assert rows[0]["data_origin"] == "imported"
+
+
+def test_missing_transaction_status_is_rejected_without_inference():
+    row = transaction()
+    row.pop("transaction_status")
+    customers = normalize_customer_rows([customer()], "bancabc_core")
+    mapping = {customers[0]["external_customer_ref"]: customers[0]["customer_id"]}
+    with pytest.raises(ImportValidationError, match="missing required fields: transaction_status"):
+        normalize_transaction_rows([row], "bancabc_core", mapping, "USD")
 
 
 def test_unknown_customer_reference_is_rejected():

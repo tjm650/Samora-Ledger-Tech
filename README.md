@@ -67,6 +67,11 @@ The Next.js workspace requires Supabase Auth sessions and trusted `app_metadata.
 
 The CRM directory and customer profiles are confidential staff functionality. Executive aggregate analytics omit customer-level information. The Supabase service-role key and Render API key are server-only.
 
+## Model development status
+
+- [Phase 1 model completion record](docs/PHASE_1_MODEL_COMPLETION.md) — mock-data behavioural segmentation scope, candidate diagnostics, model card, acceptance checklist and handoff.
+- [Model data foundation](docs/MODEL_DATA_FOUNDATION.md) and [model training pipeline](docs/MODEL_TRAINING_PIPELINE.md) describe the implementation and governance gates.
+
 ## Model and data limitations
 The MVP uses a transparent rules-based churn-risk baseline, not a trained production classifier. The new customer value score is a relative portfolio ranking based on spending, average balance, activity and tenure; it is not customer lifetime value or measured bank profitability. Product recommendations are rules-based fit signals, not calibrated purchase probabilities or automated eligibility decisions. Verified customer churn outcomes can be recorded for a future supervised model, but no ML accuracy is claimed until sufficient labelled outcomes and validation are available. The optional AI assistant uses aggregate-only context and requires an OpenAI API key. It is not credit risk or probability of default. Explanations are not SHAP. No model accuracy, precision, recall or AUC is reported because there is no labelled churn-outcome dataset. Feature/risk history and model run records are written on future pipeline runs; no historical records are fabricated retroactively.
 

@@ -229,7 +229,32 @@ def _separate_new_and_identical(existing, incoming, id_field, fields, table):
     return new_rows
 
 
-def import_to_supabase(customers, transactions, checksum, source_system, currency, file_names, approval_evidence=None):
+def _validate_resume_batch(batch, source_system, currency, checksum, approval_evidence):
+    if not batch:
+        raise ImportValidationError("resume batch ID was not found")
+    if batch.get("status") not in {"validating", "partially_loaded", "failed"}:
+        raise ImportValidationError(
+            f"batch status {batch.get('status')!r} cannot be resumed; only validating, partially_loaded or failed batches are eligible"
+        )
+    if batch.get("source_system") != source_system:
+        raise ImportValidationError("resume batch source_system does not match this package")
+    if str(batch.get("currency_code") or "").strip() != currency:
+        raise ImportValidationError("resume batch currency does not match this package")
+    if batch.get("checksum_sha256") != checksum:
+        raise ImportValidationError("resume batch checksum does not match the exact CSV files")
+    metadata = batch.get("metadata") or {}
+    previous_approval = metadata.get("approval_evidence") or {}
+    if previous_approval.get("approval_reference") != (approval_evidence or {}).get("approval_reference"):
+        raise ImportValidationError("resume batch approval reference does not match the validated manifest")
+    if previous_approval.get("file_checksum_sha256") != checksum:
+        raise ImportValidationError("resume batch does not contain matching approval checksum evidence")
+    return metadata
+
+
+def import_to_supabase(
+    customers, transactions, checksum, source_system, currency, file_names,
+    approval_evidence=None, resume_batch_id=None,
+):
     from supabase import create_client
 
     url, key = os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -261,55 +286,135 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
         "merchant_category", "channel", "post_transaction_balance", "transaction_status",
         "account_ref", "currency_code", "value_date", "counterparty_category", "source_system", "data_origin",
     ]
-    customers = _separate_new_and_identical(
+    new_customers = _separate_new_and_identical(
         existing_customers, customers, "customer_id", customer_fields, "customer"
     )
-    transactions = _separate_new_and_identical(
+    new_transactions = _separate_new_and_identical(
         existing_transactions, transactions, "transaction_id", transaction_fields, "transaction"
     )
 
-    batch = db.table("data_import_batches").insert({
-        "source_system": source_system,
-        "source_dataset": "BancABC customer and transaction export",
-        "source_file_name": ";".join(file_names),
-        "data_origin": "imported",
-        "status": "validating",
-        "currency_code": currency,
-        "source_row_count": source_customer_count + source_transaction_count,
-        "checksum_sha256": checksum,
-        "schema_version": SCHEMA_VERSION,
-        "metadata": {"source_customer_rows": source_customer_count, "source_transaction_rows": source_transaction_count, "new_customer_rows": len(customers), "new_transaction_rows": len(transactions), "import_method": "bancabc_csv_v1", "approval_evidence": approval_evidence or {}},
-    }).execute().data[0]
-    batch_id = batch["import_batch_id"]
+    if resume_batch_id:
+        result = (
+            db.table("data_import_batches").select("*")
+            .eq("import_batch_id", resume_batch_id).limit(1).execute()
+        )
+        batch_rows = result.data or []
+        batch = batch_rows[0] if batch_rows else None
+        _validate_resume_batch(
+            batch, source_system, currency, checksum, approval_evidence
+        )
+        batch_id = batch["import_batch_id"]
+        for table_name, existing in (
+            ("customers", existing_customers), ("transactions", existing_transactions)
+        ):
+            wrong_batch = [
+                row for row in existing.values()
+                if row.get("import_batch_id") != batch_id
+            ]
+            if wrong_batch:
+                raise ImportValidationError(
+                    f"Cannot resume: an identical existing {table_name} row is not linked to batch {batch_id}. "
+                    "No rows have been written; investigate lineage manually."
+                )
+        batch_metadata = batch.get("metadata") or {}
+        db.table("data_import_batches").update({
+            "status": "validating",
+            "metadata": {
+                **batch_metadata,
+                "resume_attempted_at": datetime.now(timezone.utc).isoformat(),
+            },
+        }).eq("import_batch_id", batch_id).execute()
+    else:
+        batch = db.table("data_import_batches").insert({
+            "source_system": source_system,
+            "source_dataset": "BancABC customer and transaction export",
+            "source_file_name": ";".join(file_names),
+            "data_origin": "imported",
+            "status": "validating",
+            "currency_code": currency,
+            "source_row_count": source_customer_count + source_transaction_count,
+            "checksum_sha256": checksum,
+            "schema_version": SCHEMA_VERSION,
+            "metadata": {
+                "source_customer_rows": source_customer_count,
+                "source_transaction_rows": source_transaction_count,
+                "new_customer_rows": len(new_customers),
+                "new_transaction_rows": len(new_transactions),
+                "import_method": "bancabc_csv_v1",
+                "approval_evidence": approval_evidence or {},
+            },
+        }).execute().data[0]
+        batch_id = batch["import_batch_id"]
+        batch_metadata = batch.get("metadata") or {}
+
     inserted_customers = inserted_transactions = 0
     try:
-        for chunk in _chunks(customers):
+        for chunk in _chunks(new_customers):
             payload = [{**row, "import_batch_id": batch_id} for row in chunk]
             db.table("customers").insert(payload).execute()
             inserted_customers += len(payload)
-        for chunk in _chunks(transactions):
+        for chunk in _chunks(new_transactions):
             payload = [{**row, "import_batch_id": batch_id} for row in chunk]
             db.table("transactions").insert(payload).execute()
             inserted_transactions += len(payload)
+
+        # Count rows actually carrying this batch's lineage; do not infer from
+        # this invocation's counters, which may be zero on a successful resume.
+        customer_count = db.table("customers").select("customer_id", count="exact").eq(
+            "import_batch_id", batch_id
+        ).execute().count or 0
+        transaction_count = db.table("transactions").select("transaction_id", count="exact").eq(
+            "import_batch_id", batch_id
+        ).execute().count or 0
+        expected_count = source_customer_count + source_transaction_count
+        if customer_count + transaction_count != expected_count:
+            raise ImportValidationError(
+                f"Batch lineage verification failed: expected {expected_count} rows, "
+                f"found {customer_count + transaction_count} linked to batch {batch_id}"
+            )
         db.table("data_import_batches").update({
             "status": "loaded",
-            "inserted_row_count": inserted_customers + inserted_transactions,
+            "inserted_row_count": customer_count + transaction_count,
             "rejected_row_count": 0,
-            "imported_at": datetime.now(timezone.utc).isoformat(),
+            "imported_at": batch.get("imported_at") or datetime.now(timezone.utc).isoformat(),
             "completed_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {
+                **batch_metadata,
+                "verified_customer_rows": customer_count,
+                "verified_transaction_rows": transaction_count,
+                "last_execution_inserted_customer_rows": inserted_customers,
+                "last_execution_inserted_transaction_rows": inserted_transactions,
+            },
         }).eq("import_batch_id", batch_id).execute()
     except Exception as exc:
-        db.table("data_import_batches").update({
-            "status": "partially_loaded" if inserted_customers or inserted_transactions else "failed",
-            "inserted_row_count": inserted_customers + inserted_transactions,
-            "rejected_row_count": len(customers) + len(transactions) - inserted_customers - inserted_transactions,
-            "metadata": {**batch.get("metadata", {}), "failure": str(exc)[:500]},
-        }).eq("import_batch_id", batch_id).execute()
+        try:
+            db.table("data_import_batches").update({
+                "status": "partially_loaded" if inserted_customers or inserted_transactions or resume_batch_id else "failed",
+                "inserted_row_count": inserted_customers + inserted_transactions,
+                "rejected_row_count": max(
+                    0, len(new_customers) + len(new_transactions) - inserted_customers - inserted_transactions
+                ),
+                "metadata": {
+                    **batch_metadata,
+                    "last_failure": str(exc)[:500],
+                    "last_failure_at": datetime.now(timezone.utc).isoformat(),
+                    "last_execution_inserted_customer_rows": inserted_customers,
+                    "last_execution_inserted_transaction_rows": inserted_transactions,
+                },
+            }).eq("import_batch_id", batch_id).execute()
+        except Exception:
+            # Preserve the original write/finalization exception. The batch may
+            # remain validating and must be inspected before any retry.
+            pass
         raise
     return {
-        "status": "loaded", "import_batch_id": batch_id,
-        "customers_inserted_or_updated": inserted_customers,
-        "transactions_inserted_or_updated": inserted_transactions,
+        "status": "loaded",
+        "import_batch_id": batch_id,
+        "customers_inserted_this_execution": inserted_customers,
+        "transactions_inserted_this_execution": inserted_transactions,
+        "customers_verified_in_batch": customer_count,
+        "transactions_verified_in_batch": transaction_count,
+        "resumed_existing_batch": bool(resume_batch_id),
         "checksum_sha256": checksum,
     }
 
@@ -482,7 +587,8 @@ def main():
     parser.add_argument("--transactions", required=True, help="Transaction CSV file")
     parser.add_argument("--source-system", required=True, help="Stable source identifier, e.g. bancabc_core_banking")
     parser.add_argument("--currency", required=True, help="Default ISO 4217 currency code for transaction rows")
-    parser.add_argument("--approval-manifest", help="JSON manifest containing owner approval reference and signed source control totals")
+    parser.add_argument("--approval-manifest", help="JSON manifest containing owner approval reference and source control totals")
+    parser.add_argument("--resume-batch-id", help="Resume an existing failed/partial batch only when its checksum and approval evidence match")
     parser.add_argument("--apply", action="store_true", help="Write to Supabase; requires a validated --approval-manifest")
     args = parser.parse_args()
     try:
@@ -497,6 +603,8 @@ def main():
             )
         if args.apply and approval is None:
             raise ImportValidationError("--apply requires --approval-manifest with matching approval and control totals")
+        if args.resume_batch_id and not args.apply:
+            raise ImportValidationError("--resume-batch-id requires --apply")
         summary = build_import_readiness_report(
             customers, transactions, checksum, args.source_system,
             args.currency.upper(), approval
@@ -506,7 +614,8 @@ def main():
         if args.apply:
             summary.update(import_to_supabase(
                 customers, transactions, checksum, args.source_system,
-                args.currency.upper(), [Path(args.customers).name, Path(args.transactions).name], approval
+                args.currency.upper(), [Path(args.customers).name, Path(args.transactions).name],
+                approval, args.resume_batch_id
             ))
         print(json.dumps(summary, indent=2))
     except (ImportValidationError, RuntimeError) as exc:

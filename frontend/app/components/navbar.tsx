@@ -24,6 +24,7 @@ const navItems=[
 export default function Navbar(){
  const pathname=usePathname();
  const [mobileOpen,setMobileOpen]=useState(false);
+ const [navDismissed,setNavDismissed]=useState(false);
 
  return <>
   <header className="workspace-header">
@@ -39,13 +40,15 @@ export default function Navbar(){
    {!mobileOpen&&<button className="sidebar-open-fab mobile-toggle header-mobile-menu" type="button" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>}
   </header>
   {mobileOpen&&<button className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}
-  <aside className={"workspace-sidebar collapsed"+(mobileOpen?" mobile-open":"")} aria-label="Main navigation">
+  <aside className={"workspace-sidebar collapsed"+(mobileOpen?" mobile-open":"")+(navDismissed?" nav-dismissed":"")}
+   onMouseEnter={()=>setNavDismissed(false)}
+   onMouseLeave={()=>setNavDismissed(false)} aria-label="Main navigation">
    <div className="sidebar-topline">
     <span className="sidebar-section-label"></span>
     <button className="sidebar-close mobile-toggle" type="button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={18}/></button>
    </div>
    <nav className="sidebar-nav">
-    {navItems.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={item.label} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={()=>setMobileOpen(false)}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
+    {navItems.map(item=>{const Icon=item.icon;const active=item.href==="/" ? pathname==="/" : pathname===item.href||pathname.startsWith(item.href+"/");return <Link key={item.href} href={item.href} title={item.label} aria-current={active?"page":undefined} className={"sidebar-link"+(active?" active":"")} onClick={event=>{event.currentTarget.blur();setMobileOpen(false);setNavDismissed(true);}}><Icon size={17}/><span>{item.label}</span>{active&&<i className="sidebar-active-mark"/>}</Link>})}
    </nav>
    <div className="sidebar-user" aria-label="Workspace information">
     <span className="sidebar-user-avatar" aria-hidden="true">S</span>

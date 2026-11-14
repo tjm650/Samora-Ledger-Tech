@@ -23,7 +23,7 @@ def _staff(x_api_key, authorization, write=False):
     # Growth Intelligence dashboard reads use the server-held API key only.
     # Staff authentication remains required for manual customer/product/outcome edits.
     if not write:
-        authorize_demo_read(x_api_key, None)
+        _growth_demo_access(x_api_key)
         return None
     return authorize_staff(x_api_key, authorization, {"admin","analyst","relationship_manager"})
 

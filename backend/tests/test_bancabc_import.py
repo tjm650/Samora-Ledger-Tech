@@ -472,6 +472,9 @@ def test_partial_import_failure_is_lineaged_and_safely_resumable(
                 return SimpleNamespace(data=selected, count=len(selected) if self.want_count else None)
             if self.operation == "insert":
                 payload = self.payload if isinstance(self.payload, list) else [self.payload]
+                if self.table_name == "data_import_batches":
+                    for row in payload:
+                        row.setdefault("import_batch_id", "batch-recovery-test")
                 should_fail = self.db.failure and self.db.failure[0] == self.table_name and not self.db.failed
                 if should_fail and commit_before_failure:
                     rows.extend(payload)

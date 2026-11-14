@@ -508,8 +508,8 @@ body{background:#f4f6f8;color:#1a1a1a}
   border:0;border-radius:0;box-shadow:none;
  }
  body:has(.workspace-sidebar.collapsed) .main-shell>.page-heading-actions{
-  width:calc(100% + 76px);margin-left:-76px;
-  padding-left:106px;
+  width:calc(100% + 64px);margin-left:-64px;
+  padding-left:94px;
  }
 }
 @media(max-width:760px){
@@ -590,8 +590,8 @@ body{background:#f4f6f8;color:#1a1a1a}
 .sidebar-resize-handle{display:none!important;pointer-events:none!important}
 .main-shell{margin-left:188px!important}
 .site-footer{width:calc(100% - 188px);margin-left:188px}
-body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px!important}
-body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);margin-left:76px}
+body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:64px!important}
+body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 64px);margin-left:64px}
 @media(max-width:1050px){
  .main-shell{margin-left:188px!important}
  body:has(.workspace-sidebar.collapsed) .main-shell{margin-left:76px!important}
@@ -609,7 +609,7 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
 }
 
 @media(min-width:761px){
- .workspace-sidebar.collapsed{width:76px!important;min-width:76px;max-width:76px;padding-left:10px;padding-right:10px}
+ .workspace-sidebar.collapsed{width:64px!important;min-width:64px;max-width:64px;padding-left:0;padding-right:0}
 }
 
 
@@ -629,9 +629,9 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
     left: 0;
     top: 76px;
     bottom: 0;
-    width: 76px !important;
-    min-width: 76px !important;
-    max-width: 76px !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
     padding: 24px 10px 28px;
     overflow: visible;
     z-index: 60;
@@ -651,7 +651,7 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
     background: #fff;
     border-right: 1px solid #e5ebef;
     box-shadow: none;
-    clip-path: inset(0 112px 0 0);
+    clip-path: inset(0 124px 0 0);
     transition: clip-path .18s ease, box-shadow .18s ease;
   }
 
@@ -842,10 +842,10 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
     flex: 0 0 auto;
   }
 
-  /* Use the full 76px closed rail so the active item has equal side clearance. */
+  /* Match the compact navigation container to the narrower 64px rail. */
   .workspace-sidebar.collapsed .sidebar-nav {
-    width: 76px;
-    max-width: 76px;
+    width: 64px;
+    max-width: 64px;
     flex: 0 0 auto;
   }
 

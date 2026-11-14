@@ -119,5 +119,12 @@ def test_read_only_cluster_comparison_reports_seed_stability_without_registry_wr
     assert [row["cluster_count"] for row in result["comparison"]] == [2, 3, 4, 5]
     assert all(row["stability_ari_mean"] is not None for row in result["comparison"])
     assert all(row["silhouette_mean"] is not None for row in result["comparison"])
+    feature_sets = result["feature_set_comparison"]
+    assert [row["feature_set"] for row in feature_sets] == [
+        "original_base_features", "expanded_with_derived_features"
+    ]
+    assert "net_cashflow_90d" not in feature_sets[0]["features_used"]
+    assert "net_cashflow_90d" in feature_sets[1]["features_used"]
+    assert all(row["silhouette_mean"] is not None for row in feature_sets)
     assert result["production_eligible"] is False
     assert result["not_a_churn_model"] is True

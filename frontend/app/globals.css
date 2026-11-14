@@ -958,10 +958,10 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
     margin-top: 7px;
   }
 
-  /* A narrower link footprint reduces the closed rail's side padding. */
+  /* A wider link footprint reduces the closed rail's horizontal side padding. */
   .workspace-sidebar.collapsed .sidebar-link {
-    width: 36px;
-    min-width: 36px;
+    width: 44px;
+    min-width: 44px;
   }
 
   .workspace-sidebar.collapsed:not(.nav-dismissed):hover .sidebar-link,
@@ -975,8 +975,8 @@ body:has(.workspace-sidebar.collapsed) .site-footer{width:calc(100% - 76px);marg
 @media (min-width: 761px) {
   /* Closed rail: the orange active surface and icon share the same centre. */
   .workspace-sidebar.collapsed .sidebar-link.active {
-    width: 36px;
-    min-width: 36px;
+    width: 44px;
+    min-width: 44px;
     height: 42px;
     margin-left: auto;
     margin-right: auto;

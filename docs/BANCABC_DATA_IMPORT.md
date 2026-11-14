@@ -85,3 +85,20 @@ The current implementation uses the Supabase REST API in chunks, not a single cr
 ## Current limitations
 
 This is a controlled CSV ingestion utility, not a direct core-banking connector. It expects an approved, normalized two-file export and does not implement encryption-at-rest for local source files, PII masking, automated SFTP pickup, multi-currency FX normalization, or automatic duplicate-resolution workflows. Keep source files in BancABC-approved secure storage and delete local copies according to the bank's retention policy.
+
+
+## Phase 2 approval and reconciliation manifest
+
+Any database write now requires a third package file: a JSON approval manifest based on `docs/templates/bancabc_approval_manifest.template.json`. Prepare it from the source owner's approved export specification and control report; never guess or derive approval evidence from the CSV itself.
+
+The manifest must contain:
+- Approval reference, named approving data owner and approval timestamp with timezone.
+- Stable source-system identifier and confirmed ISO 4217 currency.
+- Extraction start/end timestamps with timezone.
+- Source customer and transaction row counts.
+- Source debit, credit and combined transaction amount control totals.
+- SHA-256 checksum matching the exact customer and transaction CSV files supplied to the importer.
+
+The importer compares these values to the normalized CSV files before creating an import batch or writing records. A mismatch rejects the package. The manifest is a consistency gate, not a digital signature: an authorized project reviewer must independently verify the approval reference and control report with the BancABC source owner. A self-authored manifest is not proof of bank approval.
+
+For apply mode, include `--approval-manifest .\\approved\\bancabc_approval_manifest.json` before `--apply`. The checksum is available from dry-run output; put that exact checksum into the manifest after the source files are finalized. Re-run dry-run after any change to either CSV.

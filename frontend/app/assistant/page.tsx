@@ -12,7 +12,7 @@ const suggestions=[
 ];
 
 export default function AssistantPage(){
- const [messages,setMessages]=useState<Message[]>([{role:"assistant",content:"Hello. I'm Samora Intelligence, your AI banking business intelligence assistant. I can help interpret the portfolio metrics currently available to the platform, explain growth opportunities and prepare management-level analysis. What would you like to investigate?"}]);
+ const [messages,setMessages]=useState<Message[]>([{role:"assistant",content:"Hello. I'm Samora Employee, your AI banking business intelligence assistant. I can help interpret the portfolio metrics currently available to the platform, explain growth opportunities and prepare management-level analysis. What would you like to investigate?"}]);
  const [question,setQuestion]=useState("");
  const [asking,setAsking]=useState(false);
  const [error,setError]=useState("");
@@ -21,16 +21,16 @@ export default function AssistantPage(){
   setMessages(current=>[...current,{role:"user",content:prompt}]);setQuestion("");setAsking(true);setError("");
   try{
    const response=await fetch("/api/growth/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:prompt})});
-   const data=await response.json();if(!response.ok)throw new Error(data.error||"The AI employee could not complete this request.");
+   const data=await response.json();if(!response.ok)throw new Error(data.error||"Samora Employee could not complete this request.");
    setMessages(current=>[...current,{role:"assistant",content:data.answer||"No answer was returned."}]);
-  }catch(e){setError(e instanceof Error?e.message:"Unable to reach the AI employee.");}
+  }catch(e){setError(e instanceof Error?e.message:"Unable to reach Samora Employee.");}
   finally{setAsking(false);}
  }
  function reset(){setMessages([{role:"assistant",content:"Conversation cleared. I'm ready to help with banking intelligence and portfolio analysis. What would you like to investigate?"}]);setError("");}
  return <div className="page-content">
-  <div className="page-heading"><div><span className="eyebrow">SAMORA INTELLIGENCE</span><h1>AI Employee</h1><p className="muted">Your banking intelligence partner for customer growth, portfolio analysis and business decisions.</p></div><button className="btn btn-secondary" onClick={reset}><RotateCcw size={14}/>New conversation</button></div>
+  <div className="page-heading"><div><span className="eyebrow">SAMORA EMPLOYEE</span><h1>Samora Employee</h1><p className="muted">Your banking intelligence partner for customer growth, portfolio analysis and business decisions.</p></div><button className="btn btn-secondary" onClick={reset}><RotateCcw size={14}/>New conversation</button></div>
   <section className="panel" style={{maxWidth:1040,margin:"0 auto"}}>
-   <div className="panel-heading"><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:12,display:"grid",placeItems:"center",background:"#edf3f7",color:"#183b56"}}><Bot size={23}/></div><div><h2 className="panel-title">Samora Intelligence</h2><p className="panel-caption">AI Banking Intelligence Employee · Portfolio analysis</p></div></div><span className="status-pill status-active">Ready</span></div>
+   <div className="panel-heading"><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:12,display:"grid",placeItems:"center",background:"#edf3f7",color:"#183b56"}}><Bot size={23}/></div><div><h2 className="panel-title">Samora Employee</h2><p className="panel-caption">AI Banking Employee · Portfolio analysis</p></div></div><span className="status-pill status-active">Ready</span></div>
    <div aria-live="polite" style={{display:"flex",flexDirection:"column",gap:16,minHeight:300,maxHeight:520,overflowY:"auto",padding:"18px 4px"}}>
     {messages.map((message,index)=><div key={index} style={{display:"flex",gap:10,alignItems:"flex-start",flexDirection:message.role==="user"?"row-reverse":"row"}}>
      <div style={{width:32,height:32,flex:"0 0 32px",borderRadius:10,display:"grid",placeItems:"center",background:message.role==="user"?"#e9eef2":"#edf3f7",color:"#183b56"}}>{message.role==="user"?<UserRound size={17}/>:<Bot size={17}/>}</div>
@@ -40,7 +40,7 @@ export default function AssistantPage(){
    </div>
    {error&&<div className="governance-callout" role="alert">{error}</div>}
    <form onSubmit={e=>{e.preventDefault();void ask();}} style={{display:"flex",gap:10,alignItems:"stretch",marginTop:14}}>
-    <textarea aria-label="Message Samora Intelligence" rows={2} value={question} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();void ask();}}} placeholder="Ask about customer behaviour, churn, growth opportunities or performance…" style={{flex:1,minWidth:0,padding:13,border:"1px solid #dce3e8",borderRadius:9,resize:"vertical",font:"inherit"}}/>
+    <textarea aria-label="Message Samora Employee" rows={2} value={question} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();void ask();}}} placeholder="Ask about customer behaviour, churn, growth opportunities or performance…" style={{flex:1,minWidth:0,padding:13,border:"1px solid #dce3e8",borderRadius:9,resize:"vertical",font:"inherit"}}/>
     <button className="btn" type="submit" disabled={asking||question.trim().length<8} aria-label="Send message"><Send size={16}/>Send</button>
    </form>
    <p className="muted small-note">Shift + Enter for a new line. Current answers use aggregate portfolio context only; individual customer and transaction investigation is a planned capability, not yet enabled.</p>

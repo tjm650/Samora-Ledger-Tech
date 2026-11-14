@@ -2,6 +2,7 @@
 
 import {useEffect,useState} from "react";
 import {RefreshCw,Info} from "lucide-react";
+import {ResponsiveContainer,LineChart,Line,XAxis,YAxis,CartesianGrid,Tooltip} from "recharts";
 
 type Candidate={
   cluster_count:number;silhouette_mean:number|null;silhouette_std:number|null;
@@ -38,6 +39,25 @@ export default function DevelopmentSegmentationComparison({enabled=true}:{enable
     {error&&<div className="governance-callout" role="alert">{error}</div>}
     {loading&&!data?<div className="empty-state">Evaluating cluster-count candidates…</div>:null}
     {data&&<>
+
+      <div className="dashboard-grid" style={{marginTop:14}}>
+        <article className="panel" style={{boxShadow:"none"}}>
+          <div className="panel-heading"><div><h4 className="panel-title">Cluster separation</h4><p className="panel-caption">Mean silhouette score; higher can indicate better separation</p></div></div>
+          <div style={{width:"100%",height:230}}><ResponsiveContainer><LineChart data={data.comparison} margin={{top:8,right:14,left:0,bottom:8}}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="cluster_count" tickFormatter={value=>value+" clusters"}/><YAxis domain={[0,1]}/>
+            <Tooltip labelFormatter={value=>value+" clusters"} formatter={value=>[fmt(Number(value)),"Mean silhouette"]}/>
+            <Line type="monotone" dataKey="silhouette_mean" name="Silhouette mean" stroke="#2563eb" strokeWidth={2.5} dot={{r:4}} connectNulls={false}/>
+          </LineChart></ResponsiveContainer></div>
+        </article>
+        <article className="panel" style={{boxShadow:"none"}}>
+          <div className="panel-heading"><div><h4 className="panel-title">Run-to-run stability</h4><p className="panel-caption">Mean adjusted Rand index across random seeds; higher indicates more repeatable assignments</p></div></div>
+          <div style={{width:"100%",height:230}}><ResponsiveContainer><LineChart data={data.comparison} margin={{top:8,right:14,left:0,bottom:8}}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="cluster_count" tickFormatter={value=>value+" clusters"}/><YAxis domain={[0,1]}/>
+            <Tooltip labelFormatter={value=>value+" clusters"} formatter={value=>[fmt(Number(value)),"Mean ARI"]}/>
+            <Line type="monotone" dataKey="stability_ari_mean" name="Mean ARI" stroke="#0d9488" strokeWidth={2.5} dot={{r:4}} connectNulls={false}/>
+          </LineChart></ResponsiveContainer></div>
+        </article>
+      </div>
       <div className="table-scroll" style={{marginTop:12}}>
         <table className="table"><thead><tr><th>Clusters</th><th>Silhouette mean ± SD</th><th>Seed stability · ARI</th><th>Smallest cluster</th><th>Clusters under 2%</th><th>Seed 42 sizes</th></tr></thead>
           <tbody>{data.comparison.map(candidate=><tr key={candidate.cluster_count}>

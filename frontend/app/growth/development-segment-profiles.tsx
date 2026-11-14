@@ -2,6 +2,8 @@
 
 import {useEffect,useState} from "react";
 import {RefreshCw,Users,AlertTriangle,Info} from "lucide-react";
+import {useState as useLocalState} from "react";
+import {ResponsiveContainer,PieChart,Pie,Cell,Tooltip,Legend,BarChart,Bar,XAxis,YAxis,CartesianGrid} from "recharts";
 import DevelopmentSegmentationComparison from "./development-segmentation-comparison";
 
 type Segment={
@@ -25,6 +27,8 @@ export default function DevelopmentSegmentProfiles(){
   const [profile,setProfile]=useState<Profile|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [selectedFeature,setSelectedFeature]=useLocalState("recency_days");
+  const palette=["#2563eb","#0d9488","#d97706","#7c3aed","#db2777"];
   async function load(){
     setLoading(true);setError("");
     try{
@@ -49,6 +53,30 @@ export default function DevelopmentSegmentProfiles(){
         <div className="kpi-card"><div className="kpi-label"><Users size={14}/>Customers profiled</div><div className="kpi-value">{number(profile.customers_profiled)}</div><div className="kpi-note">Quality-passed mock feature rows</div></div>
         <div className="kpi-card"><div className="kpi-label">Clusters</div><div className="kpi-value">{profile.clusters.length}</div><div className="kpi-note">Unsupervised K-means groups</div></div>
         <div className="kpi-card"><div className="kpi-label">Silhouette diagnostic</div><div className="kpi-value">{profile.silhouette_score==null?"—":number(profile.silhouette_score)}</div><div className="kpi-note">Cluster separation diagnostic, not accuracy</div></div>
+      </div>
+
+      <div className="dashboard-grid" style={{marginTop:14}}>
+        <article className="panel" style={{boxShadow:"none"}}>
+          <div className="panel-heading"><div><h3 className="panel-title">Customer segment mix</h3><p className="panel-caption">Share of the profiled mock portfolio</p></div></div>
+          <div style={{width:"100%",height:260}}><ResponsiveContainer><PieChart>
+            <Pie data={profile.clusters} dataKey="customer_count" nameKey="segment_name" cx="50%" cy="48%" innerRadius={62} outerRadius={94} paddingAngle={3}>
+              {profile.clusters.map((segment,index)=><Cell key={segment.cluster_id} fill={palette[index%palette.length]}/>)}
+            </Pie>
+            <Tooltip formatter={(value)=>[number(Number(value)),"Customers"]}/><Legend verticalAlign="bottom" height={34}/>
+          </PieChart></ResponsiveContainer></div>
+        </article>
+        <article className="panel" style={{boxShadow:"none"}}>
+          <div className="panel-heading"><div><h3 className="panel-title">Behavioural feature comparison</h3><p className="panel-caption">Median value by segment; compare one measure at a time</p></div></div>
+          <label className="small-note" htmlFor="segment-feature-select">Feature</label>
+          <select id="segment-feature-select" className="form-input" value={selectedFeature} onChange={event=>setSelectedFeature(event.target.value)} style={{maxWidth:320,margin:"6px 0 10px"}}>
+            {Array.from(new Set(profile.clusters.flatMap(segment=>Object.keys(segment.feature_medians)))).map(key=><option key={key} value={key}>{labels[key]||key}</option>)}
+          </select>
+          <div style={{width:"100%",height:220}}><ResponsiveContainer><BarChart data={profile.clusters.map(segment=>({name:segment.segment_name,value:segment.feature_medians[selectedFeature]??0}))} margin={{top:8,right:12,left:0,bottom:8}}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize:11}} interval={0}/><YAxis tick={{fontSize:11}}/>
+            <Tooltip formatter={(value)=>[number(Number(value)),labels[selectedFeature]||selectedFeature]}/>
+            <Bar dataKey="value" name={labels[selectedFeature]||selectedFeature} fill="#2563eb" radius={[5,5,0,0]}/>
+          </BarChart></ResponsiveContainer></div>
+        </article>
       </div>
       <div className="dashboard-grid" style={{marginTop:14}}>
         {profile.clusters.map(segment=><article className="panel" key={segment.cluster_id} style={{boxShadow:"none"}}>

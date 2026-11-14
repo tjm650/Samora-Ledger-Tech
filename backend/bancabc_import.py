@@ -598,6 +598,120 @@ def build_import_readiness_report(
 
 
 
+
+def build_batch_verification_report(
+    batch: dict[str, Any] | None,
+    batch_customers: list[dict[str, Any]],
+    batch_transactions: list[dict[str, Any]],
+    customers: list[dict[str, Any]],
+    transactions: list[dict[str, Any]],
+    checksum: str,
+    source_system: str,
+    currency: str,
+    approval: dict[str, Any],
+) -> dict[str, Any]:
+    """Compare one batch against the exact approved package without writing data."""
+    errors: list[str] = []
+    if not batch:
+        return {"verification_status": "not_found", "verified": False, "errors": ["import batch was not found"]}
+    if batch.get("source_system") != source_system:
+        errors.append("source_system_mismatch")
+    if str(batch.get("currency_code") or "").strip() != currency.upper():
+        errors.append("currency_mismatch")
+    if batch.get("checksum_sha256") != checksum:
+        errors.append("checksum_mismatch")
+    metadata = batch.get("metadata") or {}
+    evidence = metadata.get("approval_evidence") or {}
+    if evidence.get("approval_reference") != approval.get("approval_reference"):
+        errors.append("approval_reference_mismatch")
+    if evidence.get("file_checksum_sha256") != checksum:
+        errors.append("approval_checksum_mismatch")
+
+    customer_fields = [
+        "external_customer_ref", "full_name", "email", "account_tier", "customer_type",
+        "relationship_start_date", "branch_code", "region_code", "source_system", "data_origin",
+    ]
+    transaction_fields = [
+        "customer_id", "external_transaction_ref", "timestamp", "amount", "transaction_type",
+        "merchant_category", "channel", "post_transaction_balance", "transaction_status",
+        "account_ref", "currency_code", "value_date", "counterparty_category", "source_system", "data_origin",
+    ]
+
+    def compare_rows(expected_rows, actual_rows, id_field, fields, label):
+        expected = {row[id_field]: row for row in expected_rows}
+        actual = {row[id_field]: row for row in actual_rows}
+        missing = set(expected) - set(actual)
+        unexpected = set(actual) - set(expected)
+        mismatched = 0
+        wrong_lineage = 0
+        for record_id in set(expected) & set(actual):
+            current = actual[record_id]
+            if current.get("import_batch_id") != batch.get("import_batch_id"):
+                wrong_lineage += 1
+            if any(
+                _canonical(current.get(field), field) != _canonical(expected[record_id].get(field), field)
+                for field in fields
+            ):
+                mismatched += 1
+        if missing:
+            errors.append(f"{label}_missing_rows")
+        if unexpected:
+            errors.append(f"{label}_unexpected_rows")
+        if mismatched:
+            errors.append(f"{label}_source_value_mismatches")
+        if wrong_lineage:
+            errors.append(f"{label}_lineage_mismatches")
+        return {
+            "expected": len(expected), "found": len(actual), "missing": len(missing),
+            "unexpected": len(unexpected), "source_value_mismatches": mismatched,
+            "lineage_mismatches": wrong_lineage,
+        }
+
+    customer_result = compare_rows(customers, batch_customers, "customer_id", customer_fields, "customer")
+    transaction_result = compare_rows(transactions, batch_transactions, "transaction_id", transaction_fields, "transaction")
+    expected_total = len(customers) + len(transactions)
+    if batch.get("source_row_count") != expected_total:
+        errors.append("batch_source_row_count_mismatch")
+    if metadata.get("source_customer_rows") != len(customers):
+        errors.append("batch_customer_manifest_count_mismatch")
+    if metadata.get("source_transaction_rows") != len(transactions):
+        errors.append("batch_transaction_manifest_count_mismatch")
+    batch_status = batch.get("status")
+    if batch_status != "loaded":
+        errors.append("batch_not_marked_loaded")
+    verified = not errors
+    return {
+        "verification_status": "verified" if verified else "mismatch",
+        "verified": verified,
+        "import_batch_id": batch.get("import_batch_id"),
+        "batch_status": batch_status,
+        "source_system": source_system,
+        "currency_code": currency.upper(),
+        "checksum_sha256": checksum,
+        "approval_reference": approval.get("approval_reference"),
+        "customers": customer_result,
+        "transactions": transaction_result,
+        "expected_total_rows": expected_total,
+        "found_total_rows": len(batch_customers) + len(batch_transactions),
+        "errors": errors,
+        "read_only": True,
+    }
+
+
+def verify_import_batch(db, batch_id, customers, transactions, checksum, source_system, currency, approval):
+    batch_result = db.table("data_import_batches").select("*").eq("import_batch_id", batch_id).limit(1).execute()
+    batch_rows = batch_result.data or []
+    batch = batch_rows[0] if batch_rows else None
+    if not batch:
+        return build_batch_verification_report(None, [], [], customers, transactions, checksum, source_system, currency, approval)
+    customer_result = db.table("customers").select("*").eq("import_batch_id", batch_id).execute()
+    transaction_result = db.table("transactions").select("*").eq("import_batch_id", batch_id).execute()
+    return build_batch_verification_report(
+        batch, customer_result.data or [], transaction_result.data or [],
+        customers, transactions, checksum, source_system, currency, approval,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Validate or import an approved BancABC CSV export.")
     parser.add_argument("--customers", required=True, help="Customer CSV file")
@@ -606,6 +720,7 @@ def main():
     parser.add_argument("--currency", required=True, help="Default ISO 4217 currency code for transaction rows")
     parser.add_argument("--approval-manifest", help="JSON manifest containing owner approval reference and source control totals")
     parser.add_argument("--resume-batch-id", help="Resume an existing failed/partial batch only when its checksum and approval evidence match")
+    parser.add_argument("--verify-batch-id", help="Read-only verification of a batch against the exact approved CSV package")
     parser.add_argument("--apply", action="store_true", help="Write to Supabase; requires a validated --approval-manifest")
     args = parser.parse_args()
     try:
@@ -622,10 +737,30 @@ def main():
             raise ImportValidationError("--apply requires --approval-manifest with matching approval and control totals")
         if args.resume_batch_id and not args.apply:
             raise ImportValidationError("--resume-batch-id requires --apply")
+        if args.verify_batch_id and args.apply:
+            raise ImportValidationError("--verify-batch-id is read-only and cannot be combined with --apply")
+        if args.verify_batch_id and approval is None:
+            raise ImportValidationError("--verify-batch-id requires --approval-manifest")
+        if args.verify_batch_id and args.resume_batch_id:
+            raise ImportValidationError("--verify-batch-id cannot be combined with --resume-batch-id")
         summary = build_import_readiness_report(
             customers, transactions, checksum, args.source_system,
             args.currency.upper(), approval
         )
+        if args.verify_batch_id:
+            from supabase import create_client
+            url, key = os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            if not url or not key:
+                raise RuntimeError("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the local environment")
+            db = create_client(url, key)
+            verification = verify_import_batch(
+                db, args.verify_batch_id, customers, transactions, checksum,
+                args.source_system, args.currency.upper(), approval
+            )
+            print(json.dumps(verification, indent=2))
+            if not verification["verified"]:
+                raise SystemExit(3)
+            return
         if args.apply:
             summary["mode"] = "apply"
         if args.apply:

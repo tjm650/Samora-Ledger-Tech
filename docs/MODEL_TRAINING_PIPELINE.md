@@ -91,3 +91,13 @@ The expanded-feature k=4 comparison previously reported silhouette mean 0.4917, 
 The ARI values indicate agreement across the tested random seeds on this same snapshot only; they do not measure stability over time, across new samples, or across real BancABC data. The silhouette score measures geometric separation, not predictive accuracy. Cluster medians and heuristic names are relative to the mock portfolio and must not be used for customer targeting, credit, risk, or other decisions. Reconstructed membership is based on the current eligible feature snapshot and can differ from training-time assignments if the snapshot changes.
 
 **Phase 1 disposition:** the mock segmentation pipeline, artifact integrity checks, aggregate profiling and candidate-comparison workflow are exercised. The candidate remains development-only. Production approval, activation, customer-level use, and any claim of real BancABC segmentation remain out of scope pending representative approved data, business validation, temporal stability testing and governance review.
+
+## Read-only temporal segmentation stability review
+
+- `GET /api/v1/model-training/development-segmentation/temporal-stability` applies the same checksum-verified, frozen experimental K-means artifact to up to the six most recent distinct historical feature snapshots.
+- Historical rows are limited to customers explicitly marked mock and snapshots marked quality-passed. Derived behavioural features are reconstructed in memory from the persisted historical feature values.
+- Adjacent snapshots are compared only for customers present in both. The endpoint reports adjusted Rand index (ARI), overlap size and cluster-share changes. Comparisons with fewer than 30 overlapping customers are marked insufficient rather than scored.
+- At least two distinct eligible snapshots are required. If history contains only one snapshot, the endpoint reports `insufficient_historical_snapshots`; it does not create or backfill snapshots.
+- Temporal ARI measures assignment agreement on the overlapping cohort. It is not a measure of business validity, model accuracy or desirable behavioural stability. Changes can reflect real customer behaviour, data coverage, feature-engineering changes or mock-data construction.
+- The Growth Intelligence panel surfaces this review read-only. A new snapshot should only be created through a legitimate feature-engineering run; no artificial snapshots should be introduced to make the comparison evaluable.
+- This review remains mock-only, experimental, inactive and not production eligible.

@@ -296,7 +296,8 @@ def test_resume_batch_requires_matching_source_currency_checksum_and_approval():
         ({"source_system": "other_core"}, "source_system"),
         ({"currency_code": "ZAR"}, "currency"),
         ({"checksum_sha256": "b" * 64}, "checksum"),
-        ({"metadata": {"approval_evidence": {"approval_reference": "OTHER", "file_checksum_sha256": "a" * 64}}}, "approval reference"),
+        ({"metadata": {"approval_evidence": {"approval_reference": "OTHER", "file_checksum_sha256": "a" * 64}}}, "approval evidence"),
+        ({"metadata": {"approval_evidence": {"approval_reference": "BANK-APPROVAL-17", "approved_by": "Different Owner", "file_checksum_sha256": "a" * 64}}}, "approval evidence"),
     ],
 )
 def test_resume_batch_rejects_incompatible_batch(change, message):

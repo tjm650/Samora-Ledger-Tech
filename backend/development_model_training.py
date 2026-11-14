@@ -492,6 +492,53 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
                 "clusters_below_2pct": int(sum(value / len(frame) < 0.02 for value in representative_counts)),
                 "feature_medians_by_cluster": representative_medians,
             })
+        # Compare original and expanded feature contracts on identical mock rows,
+        # with the same preprocessing, cluster count and random seeds.
+        feature_set_comparison = []
+        feature_sets = [
+            ("original_base_features", [c for c in BASE_FEATURE_COLUMNS if c in frame and frame[c].notna().any()]),
+            ("expanded_with_derived_features", [c for c in FEATURE_COLUMNS if c in frame and frame[c].notna().any()]),
+        ]
+        comparison_k = min(4, len(frame) - 1)
+        for feature_set_name, feature_set_columns in feature_sets:
+            if len(feature_set_columns) < 2 or comparison_k < 2:
+                continue
+            variant_x = frame[feature_set_columns]
+            variant_assignments, variant_silhouettes, variant_counts = [], [], []
+            for seed in seeds:
+                variant_estimator = Pipeline([
+                    ("imputer", SimpleImputer(strategy="median", add_indicator=True)),
+                    ("scaler", StandardScaler()),
+                    ("clusterer", KMeans(n_clusters=comparison_k, random_state=seed, n_init=20)),
+                ])
+                variant_labels = variant_estimator.fit_predict(variant_x)
+                variant_assignments.append(variant_labels)
+                variant_transformed = variant_estimator[:-1].transform(variant_x)
+                if 1 < len(np.unique(variant_labels)) < len(frame):
+                    variant_silhouettes.append(float(silhouette_score(
+                        variant_transformed, variant_labels,
+                        sample_size=min(500, len(frame)), random_state=42,
+                    )))
+                variant_counts.append(np.bincount(variant_labels, minlength=comparison_k))
+            variant_ari = [
+                float(adjusted_rand_score(variant_assignments[i], variant_assignments[j]))
+                for i in range(len(variant_assignments)) for j in range(i + 1, len(variant_assignments))
+            ]
+            representative = variant_counts[seeds.index(42)]
+            feature_set_comparison.append({
+                "feature_set": feature_set_name,
+                "features_used": feature_set_columns,
+                "cluster_count": comparison_k,
+                "silhouette_mean": round(float(np.mean(variant_silhouettes)), 4) if variant_silhouettes else None,
+                "silhouette_std": round(float(np.std(variant_silhouettes)), 4) if variant_silhouettes else None,
+                "stability_ari_mean": round(float(np.mean(variant_ari)), 4) if variant_ari else None,
+                "stability_ari_min": round(float(np.min(variant_ari)), 4) if variant_ari else None,
+                "representative_seed": 42,
+                "representative_cluster_sizes": [int(value) for value in representative],
+                "smallest_cluster_share_pct": round(int(representative.min()) / len(frame) * 100, 2),
+                "clusters_below_2pct": int(sum(value / len(frame) < 0.02 for value in representative)),
+            })
+
         return {
             "status": "completed_read_only_development_comparison",
             "data_origin": "mock",

@@ -128,3 +128,31 @@ def test_read_only_cluster_comparison_reports_seed_stability_without_registry_wr
     assert all(row["silhouette_mean"] is not None for row in feature_sets)
     assert result["production_eligible"] is False
     assert result["not_a_churn_model"] is True
+
+def test_temporal_assignment_comparison_uses_overlapping_customers_only():
+    from development_model_training import _compare_temporal_assignments
+
+    previous = {f"c{i}": i % 2 for i in range(40)}
+    current = {f"c{i}": i % 2 for i in range(30)}
+    current.update({f"new-{i}": i % 2 for i in range(10)})
+    result = _compare_temporal_assignments(
+        {"2026-01-01": previous, "2026-02-01": current},
+        ["2026-01-01", "2026-02-01"],
+    )
+
+    assert len(result) == 1
+    assert result[0]["status"] == "evaluated"
+    assert result[0]["overlapping_customers"] == 30
+    assert result[0]["adjusted_rand_index"] == 1.0
+
+
+def test_temporal_assignment_comparison_flags_insufficient_overlap():
+    from development_model_training import _compare_temporal_assignments
+
+    result = _compare_temporal_assignments(
+        {"2026-01-01": {"a": 0, "b": 1}, "2026-02-01": {"a": 0, "b": 1}},
+        ["2026-01-01", "2026-02-01"],
+    )
+
+    assert result[0]["status"] == "insufficient_overlap"
+    assert result[0]["adjusted_rand_index"] is None

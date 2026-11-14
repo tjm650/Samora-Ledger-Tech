@@ -14,7 +14,7 @@ type Comparison={
   comparison:Candidate[];interpretation_note:string;
 };
 const fmt=(value:number|null|undefined)=>value==null?"—":value.toFixed(3);
-export default function DevelopmentSegmentationComparison(){
+export default function DevelopmentSegmentationComparison({enabled=true}:{enabled?:boolean}){
   const [data,setData]=useState<Comparison|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
@@ -28,7 +28,7 @@ export default function DevelopmentSegmentationComparison(){
     }catch(e){setError(e instanceof Error?e.message:"Unable to compare segmentation candidates.");}
     finally{setLoading(false);}
   }
-  useEffect(()=>{void load();},[]);
+  useEffect(()=>{if(enabled&&!data)void load();},[enabled]);
   return <section className="panel" style={{marginTop:18,boxShadow:"none"}}>
     <div className="panel-heading">
       <div><h3 className="panel-title">Cluster-count stability review</h3><p className="panel-caption">Read-only comparison of 2–5 clusters across repeated initialisations</p></div>

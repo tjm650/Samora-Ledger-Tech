@@ -23,6 +23,19 @@ const labels:Record<string,string>={
   balance_avg_30d:"Average balance · 30 days"
 };
 const number=(v:number)=>new Intl.NumberFormat("en-US",{maximumFractionDigits:1}).format(v);
+function segmentLabel(segment:Segment){
+  const m=segment.feature_medians;
+  if((m.frequency_30d??1)===0&&(m.recency_days??0)>=30)return "No recent transactions";
+  if((m.frequency_30d??Infinity)<=2&&(m.recency_days??0)>=7&&(m.monthly_spend_trend_30d_vs_90d??0)<=-0.5)return "Low and declining activity";
+  return segment.segment_name;
+}
+function segmentSummary(segment:Segment){
+  const m=segment.feature_medians;
+  if(segmentLabel(segment)==="No recent transactions")return "Median transaction frequency over 30 days is zero, with the last observed transaction around 40 days ago.";
+  if(segmentLabel(segment)==="Low and declining activity")return "Recent transaction frequency is low and the 30-day spend run rate is materially below the preceding 90-day monthly run rate.";
+  return segment.summary;
+}
+
 export default function DevelopmentSegmentProfiles(){
   const [profile,setProfile]=useState<Profile|null>(null);
   const [loading,setLoading]=useState(true);
@@ -59,7 +72,7 @@ export default function DevelopmentSegmentProfiles(){
         <article className="panel" style={{boxShadow:"none"}}>
           <div className="panel-heading"><div><h3 className="panel-title">Customer segment mix</h3><p className="panel-caption">Share of the profiled mock portfolio</p></div></div>
           <div style={{width:"100%",height:260}}><ResponsiveContainer><PieChart>
-            <Pie data={profile.clusters} dataKey="customer_count" nameKey="segment_name" cx="50%" cy="48%" innerRadius={62} outerRadius={94} paddingAngle={3}>
+            <Pie data={profile.clusters.map(segment=>({...segment,segment_name:segmentLabel(segment)}))} dataKey="customer_count" nameKey="segment_name" cx="50%" cy="48%" innerRadius={62} outerRadius={94} paddingAngle={3}>
               {profile.clusters.map((segment,index)=><Cell key={segment.cluster_id} fill={palette[index%palette.length]}/>)}
             </Pie>
             <Tooltip formatter={(value)=>[number(Number(value)),"Customers"]}/><Legend verticalAlign="bottom" height={34}/>
@@ -71,7 +84,7 @@ export default function DevelopmentSegmentProfiles(){
           <select id="segment-feature-select" className="form-input" value={selectedFeature} onChange={event=>setSelectedFeature(event.target.value)} style={{maxWidth:320,margin:"6px 0 10px"}}>
             {Array.from(new Set(profile.clusters.flatMap(segment=>Object.keys(segment.feature_medians)))).map(key=><option key={key} value={key}>{labels[key]||key}</option>)}
           </select>
-          <div style={{width:"100%",height:220}}><ResponsiveContainer><BarChart data={profile.clusters.map(segment=>({name:segment.segment_name,value:segment.feature_medians[selectedFeature]??0}))} margin={{top:8,right:12,left:0,bottom:8}}>
+          <div style={{width:"100%",height:220}}><ResponsiveContainer><BarChart data={profile.clusters.map(segment=>({name:segmentLabel(segment),value:segment.feature_medians[selectedFeature]??0}))} margin={{top:8,right:12,left:0,bottom:8}}>
             <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize:11}} interval={0}/><YAxis tick={{fontSize:11}}/>
             <Tooltip formatter={(value)=>[number(Number(value)),labels[selectedFeature]||selectedFeature]}/>
             <Bar dataKey="value" name={labels[selectedFeature]||selectedFeature} fill="#2563eb" radius={[5,5,0,0]}/>
@@ -80,12 +93,12 @@ export default function DevelopmentSegmentProfiles(){
       </div>
       <div className="dashboard-grid" style={{marginTop:14}}>
         {profile.clusters.map(segment=><article className="panel" key={segment.cluster_id} style={{boxShadow:"none"}}>
-          <div className="panel-heading"><div><span className="eyebrow">CLUSTER {segment.cluster_id}</span><h3 className="panel-title">{segment.segment_name}</h3></div>
+          <div className="panel-heading"><div><span className="eyebrow">CLUSTER {segment.cluster_id}</span><h3 className="panel-title">{segmentLabel(segment)}</h3></div>
             {segment.small_cluster_review&&<span className="status-badge"><AlertTriangle size={13}/>Small cluster review</span>}
           </div>
           <div className="kpi-value">{number(segment.customer_count)}</div><div className="kpi-note">{number(segment.share_pct)}% of profiled customers</div>
           <div className="risk-driver-track" style={{margin:"12px 0 14px"}}><span style={{width:segment.share_pct+"%"}}/></div>
-          <p className="panel-caption">{segment.summary}</p>
+          <p className="panel-caption">{segmentSummary(segment)}</p>
           {segment.signals.length>0&&<div style={{marginTop:12}}><strong className="small-note">Relative signals</strong><ul className="segment-signal-list">{segment.signals.map(signal=><li key={signal}>{signal}</li>)}</ul></div>}
           <div className="table-scroll" style={{marginTop:12}}><table className="table"><thead><tr><th>Feature median</th><th>Value</th></tr></thead><tbody>{Object.entries(segment.feature_medians).map(([key,value])=><tr key={key}><td>{labels[key]||key}</td><td>{number(value)}</td></tr>)}</tbody></table></div>
         </article>)}

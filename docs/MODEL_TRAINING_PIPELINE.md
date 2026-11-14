@@ -36,3 +36,12 @@ All models are registered as `experimental` and `is_active=false`. A human revie
 
 ## Current limitation
 The connected database has mock-only customer and feature rows and no verified churn outcomes. The development segmentation experiment can exercise model artifact storage and registry/evaluation plumbing, but supervised churn training remains blocked until approved BancABC data and verified outcomes are available.
+
+
+## Aggregate segment profiling
+- `GET /api/v1/model-training/development-segmentation/profile` retrieves the latest registered experimental K-means artifact and reconstructs cluster membership from the current quality-passed mock feature snapshot.
+- The endpoint returns aggregate cluster counts, shares, feature medians and heuristic descriptions relative to portfolio medians. It does not return customer identifiers or individual cluster assignments.
+- Clusters below 2% of the profiled population are flagged for manual review. Descriptions are heuristic and are not validated business classifications.
+- The Growth Intelligence page displays this read-only profile through a server-side API proxy. The proxy uses the server-held API key; no API key is exposed to the browser.
+- The profile is a view of the latest registered model against the current eligible mock feature snapshot. If features change after training, reconstructed cluster membership may differ from the original training-time distribution.
+- All output remains mock-only, experimental, not a churn model, and not production eligible.

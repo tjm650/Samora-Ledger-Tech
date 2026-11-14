@@ -102,3 +102,18 @@ The manifest must contain:
 The importer compares these values to the normalized CSV files before creating an import batch or writing records. A mismatch rejects the package. The manifest is a consistency gate, not a digital signature: an authorized project reviewer must independently verify the approval reference and control report with the BancABC source owner. A self-authored manifest is not proof of bank approval.
 
 For apply mode, include `--approval-manifest .\\approved\\bancabc_approval_manifest.json` before `--apply`. The checksum is available from dry-run output; put that exact checksum into the manifest after the source files are finalized. Re-run dry-run after any change to either CSV.
+
+
+## Phase 2 dry-run readiness report
+
+A dry-run emits aggregate reconciliation evidence without writing to Supabase:
+- Validated customer and transaction row counts and exact-file SHA-256 checksum.
+- Package currency and observed UTC transaction time range.
+- Transaction-status counts.
+- Debit, credit and combined amount totals.
+- Branch-level transaction counts and debit/credit totals, grouped through the supplied customer branch code (missing branch codes are reported as `UNSPECIFIED`).
+- Whether the supplied approval manifest passed structural and control-total checks.
+
+Without a manifest, the report is marked `awaiting_approval_manifest`; this is not an import-ready approval. With a manifest, it is marked `approval_manifest_validated`, but independent human verification of the bank's approval and source control report is still mandatory.
+
+The importer currently enforces one package currency per export. Mixed-currency files must be split into separately approved packages; it does not perform FX conversion. Transaction timestamps must fall within the manifest's half-open extraction interval `[extraction_start, extraction_end)`. Approval must predate or equal extraction start.

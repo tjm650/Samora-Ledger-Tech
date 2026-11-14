@@ -396,16 +396,25 @@ def import_to_supabase(
         }).eq("import_batch_id", batch_id).execute()
     except Exception as exc:
         try:
+            actual_customers = db.table("customers").select(
+                "customer_id", count="exact"
+            ).eq("import_batch_id", batch_id).execute().count or 0
+            actual_transactions = db.table("transactions").select(
+                "transaction_id", count="exact"
+            ).eq("import_batch_id", batch_id).execute().count or 0
+            actual_total = actual_customers + actual_transactions
             db.table("data_import_batches").update({
-                "status": "partially_loaded" if inserted_customers or inserted_transactions or resume_batch_id else "failed",
-                "inserted_row_count": inserted_customers + inserted_transactions,
+                "status": "partially_loaded" if actual_total else "failed",
+                "inserted_row_count": actual_total,
                 "rejected_row_count": max(
-                    0, len(new_customers) + len(new_transactions) - inserted_customers - inserted_transactions
+                    0, source_customer_count + source_transaction_count - actual_total
                 ),
                 "metadata": {
                     **batch_metadata,
                     "last_failure": str(exc)[:500],
                     "last_failure_at": datetime.now(timezone.utc).isoformat(),
+                    "verified_customer_rows": actual_customers,
+                    "verified_transaction_rows": actual_transactions,
                     "last_execution_inserted_customer_rows": inserted_customers,
                     "last_execution_inserted_transaction_rows": inserted_transactions,
                 },

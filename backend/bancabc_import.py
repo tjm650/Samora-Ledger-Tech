@@ -333,6 +333,8 @@ def validate_approval_manifest(
             manifest = json.load(handle)
     except (OSError, json.JSONDecodeError) as exc:
         raise ImportValidationError(f"approval manifest cannot be read: {exc}") from exc
+    if not isinstance(manifest, dict):
+        raise ImportValidationError("approval manifest root must be a JSON object")
     required = (
         "approval_reference", "approved_by", "approved_at", "source_system",
         "currency_code", "extraction_start", "extraction_end",
@@ -358,13 +360,18 @@ def validate_approval_manifest(
         raise ImportValidationError("extraction_start must be earlier than extraction_end")
     if approved_at > extraction_start:
         raise ImportValidationError("approval timestamp must not be later than extraction_start")
-    if manifest["file_checksum_sha256"].lower() != checksum.lower():
+    declared_checksum = manifest["file_checksum_sha256"]
+    if not isinstance(declared_checksum, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", declared_checksum):
+        raise ImportValidationError("approval manifest file_checksum_sha256 must be a 64-character SHA-256 hex digest")
+    if declared_checksum.lower() != checksum.lower():
         raise ImportValidationError("approval manifest file_checksum_sha256 does not match the supplied CSV files")
     expected_counts = {
         "customer_count": len(customers),
         "transaction_count": len(transactions),
     }
     for key, actual in expected_counts.items():
+        if isinstance(manifest[key], bool):
+            raise ImportValidationError(f"approval manifest {key} must be an integer")
         try:
             declared = int(manifest[key])
         except (TypeError, ValueError) as exc:

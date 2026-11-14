@@ -113,7 +113,7 @@ def test_approval_manifest_must_match_counts_totals_currency_and_checksum(tmp_pa
     assert result["transaction_amount_total"] == "125.5000"
 
 
-def test_approval_manifest_rejects_mismatched_source_control_total(tmp_path):
+def test_approval_manifest_rejects_mismatched_file_checksum(tmp_path):
     customers = normalize_customer_rows([customer()], "bancabc_core")
     mapping = {customers[0]["external_customer_ref"]: customers[0]["customer_id"]}
     transactions = normalize_transaction_rows(
@@ -239,3 +239,33 @@ def test_readiness_report_contains_aggregate_reconciliation_and_branch_totals():
     assert report["source_reconciliation"]["transaction_amount_total"] == "175.7500"
     assert report["source_reconciliation"]["branch_totals"]["HARARE-01"]["transaction_count"] == 2
     assert report["transaction_status_counts"] == {"posted": 2}
+
+
+
+def test_approval_manifest_rejects_mismatched_source_control_total(tmp_path):
+    customers = normalize_customer_rows([customer()], "bancabc_core")
+    mapping = {customers[0]["external_customer_ref"]: customers[0]["customer_id"]}
+    transactions = normalize_transaction_rows(
+        [transaction()], "bancabc_core", mapping, "USD"
+    )
+    manifest = {
+        "approval_reference": "DATA-APPROVAL-2026-002",
+        "approved_by": "BancABC Data Owner",
+        "approved_at": "2026-09-30T09:00:00+02:00",
+        "source_system": "bancabc_core",
+        "currency_code": "USD",
+        "extraction_start": "2026-10-01T00:00:00+02:00",
+        "extraction_end": "2026-11-01T00:00:00+02:00",
+        "customer_count": 1,
+        "transaction_count": 1,
+        "debit_total": "125.4900",
+        "credit_total": "0.0000",
+        "transaction_amount_total": "125.4900",
+        "file_checksum_sha256": "f" * 64,
+    }
+    path = tmp_path / "approval.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ImportValidationError, match="debit_total mismatch"):
+        validate_approval_manifest(
+            str(path), customers, transactions, "bancabc_core", "USD", "f" * 64
+        )

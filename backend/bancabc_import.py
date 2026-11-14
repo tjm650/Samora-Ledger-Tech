@@ -225,7 +225,7 @@ def _separate_new_and_identical(existing, incoming, id_field, fields, table):
     return new_rows
 
 
-def import_to_supabase(customers, transactions, checksum, source_system, currency, file_names):
+def import_to_supabase(customers, transactions, checksum, source_system, currency, file_names, approval_evidence=None):
     from supabase import create_client
 
     url, key = os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -274,7 +274,7 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
         "source_row_count": source_customer_count + source_transaction_count,
         "checksum_sha256": checksum,
         "schema_version": SCHEMA_VERSION,
-        "metadata": {"source_customer_rows": source_customer_count, "source_transaction_rows": source_transaction_count, "new_customer_rows": len(customers), "new_transaction_rows": len(transactions), "import_method": "bancabc_csv_v1"},
+        "metadata": {"source_customer_rows": source_customer_count, "source_transaction_rows": source_transaction_count, "new_customer_rows": len(customers), "new_transaction_rows": len(transactions), "import_method": "bancabc_csv_v1", "approval_evidence": approval_evidence or {}},
     }).execute().data[0]
     batch_id = batch["import_batch_id"]
     inserted_customers = inserted_transactions = 0
@@ -422,7 +422,7 @@ def main():
         if args.apply:
             summary.update(import_to_supabase(
                 customers, transactions, checksum, args.source_system,
-                args.currency.upper(), [Path(args.customers).name, Path(args.transactions).name]
+                args.currency.upper(), [Path(args.customers).name, Path(args.transactions).name], approval
             ))
         print(json.dumps(summary, indent=2))
     except (ImportValidationError, RuntimeError) as exc:

@@ -33,6 +33,24 @@ def transaction(ref="T-001", customer_ref="C-001"):
     }
 
 
+
+def approval_evidence(checksum, reference="BANK-APPROVAL-TEST"):
+    return {
+        "approval_reference": reference,
+        "approved_by": "Approved Data Owner",
+        "approved_at": "2026-09-30T07:00:00+00:00",
+        "extraction_start": "2026-09-30T22:00:00+00:00",
+        "extraction_end": "2026-10-31T22:00:00+00:00",
+        "customer_count": 1,
+        "transaction_count": 1,
+        "debit_total": "125.5000",
+        "credit_total": "0.0000",
+        "transaction_amount_total": "125.5000",
+        "currency_code": "USD",
+        "file_checksum_sha256": checksum,
+    }
+
+
 def test_customer_ids_are_stable_and_provenance_is_explicit():
     first = normalize_customer_rows([customer()], "bancabc_core")
     second = normalize_customer_rows([customer()], "bancabc_core")
@@ -327,7 +345,7 @@ def test_batch_verification_requires_exact_rows_values_lineage_and_loaded_status
     batch_customers = [{**customers[0], "import_batch_id": batch_id}]
     batch_transactions = [{**transactions[0], "import_batch_id": batch_id}]
     checksum = "a" * 64
-    approval = {"approval_reference": "BANK-APPROVAL-17", "file_checksum_sha256": checksum}
+    approval = approval_evidence(checksum, "BANK-APPROVAL-17")
     batch = {
         "import_batch_id": batch_id,
         "status": "loaded",
@@ -359,7 +377,7 @@ def test_batch_verification_detects_missing_extra_modified_and_wrong_lineage_row
         [transaction()], "bancabc_core", customer_ids, "USD"
     )
     checksum = "b" * 64
-    approval = {"approval_reference": "BANK-APPROVAL-18", "file_checksum_sha256": checksum}
+    approval = approval_evidence(checksum, "BANK-APPROVAL-18")
     batch_id = "batch-incomplete"
     altered_customer = {**customers[0], "full_name": "Altered Name", "import_batch_id": "other-batch"}
     extra_customer = {**customers[0], "customer_id": "unexpected-id", "import_batch_id": batch_id}
@@ -391,7 +409,7 @@ def test_batch_verification_detects_missing_extra_modified_and_wrong_lineage_row
 def test_batch_verification_reports_missing_batch_without_database_writes():
     customers = normalize_customer_rows([customer()], "bancabc_core")
     checksum = "c" * 64
-    approval = {"approval_reference": "BANK-APPROVAL-19", "file_checksum_sha256": checksum}
+    approval = approval_evidence(checksum, "BANK-APPROVAL-19")
     report = build_batch_verification_report(
         None, [], [], customers, [], checksum, "bancabc_core", "USD", approval
     )
@@ -436,6 +454,7 @@ def test_partial_import_failure_is_lineaged_and_safely_resumable(
             self.db, self.table_name = db, table
             self.operation, self.payload = "select", None
             self.filters, self.in_filters, self.want_count = {}, {}, False
+            self.page_range = None
 
         def select(self, *_args, **kwargs):
             self.operation = "select"
@@ -451,6 +470,10 @@ def test_partial_import_failure_is_lineaged_and_safely_resumable(
             return self
 
         def limit(self, _value):
+            return self
+
+        def range(self, start, end):
+            self.page_range = (start, end)
             return self
 
         def insert(self, payload):
@@ -469,6 +492,9 @@ def test_partial_import_failure_is_lineaged_and_safely_resumable(
                     if all(row.get(k) == v for k, v in self.filters.items())
                     and all(row.get(k) in values for k, values in self.in_filters.items())
                 ]
+                if self.page_range:
+                    start, end = self.page_range
+                    selected = selected[start:end + 1]
                 return SimpleNamespace(data=selected, count=len(selected) if self.want_count else None)
             if self.operation == "insert":
                 payload = self.payload if isinstance(self.payload, list) else [self.payload]

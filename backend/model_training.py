@@ -145,7 +145,13 @@ def _load_eligible_dataset(db) -> tuple[pd.DataFrame, dict[str, int]]:
             continue
         feature = feature_map[cid]
         try:
-            if pd.Timestamp(feature["feature_as_of"]) > pd.Timestamp(label["outcome_window_start"]):
+            feature_cutoff = pd.Timestamp(feature["feature_as_of"])
+            label_window_start = pd.Timestamp(label["outcome_window_start"])
+            if label_window_start.tzinfo is None:
+                label_window_start = label_window_start.tz_localize("UTC")
+            if feature_cutoff.tzinfo is None:
+                feature_cutoff = feature_cutoff.tz_localize("UTC")
+            if feature_cutoff > label_window_start:
                 continue
         except (TypeError, ValueError):
             continue

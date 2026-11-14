@@ -712,6 +712,10 @@ def build_batch_verification_report(
     expected_total = len(customers) + len(transactions)
     if batch.get("source_row_count") != expected_total:
         errors.append("batch_source_row_count_mismatch")
+    if batch.get("inserted_row_count") != expected_total:
+        errors.append("batch_inserted_row_count_mismatch")
+    if batch.get("rejected_row_count") != 0:
+        errors.append("batch_rejected_rows_present")
     if metadata.get("source_customer_rows") != len(customers):
         errors.append("batch_customer_manifest_count_mismatch")
     if metadata.get("source_transaction_rows") != len(transactions):

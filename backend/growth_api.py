@@ -20,8 +20,19 @@ def _rows(db, table, fields="*", page_size=1000):
         offset+=page_size
 
 def _staff(x_api_key, authorization, write=False):
-    if write: return authorize_staff(x_api_key, authorization, {"admin","analyst","relationship_manager"})
-    return authorize_demo_read(x_api_key, authorization)
+    # Growth Intelligence dashboard reads use the server-held API key only.
+    # Staff authentication remains required for manual customer/product/outcome edits.
+    if not write:
+        authorize_demo_read(x_api_key, None)
+        return None
+    return authorize_staff(x_api_key, authorization, {"admin","analyst","relationship_manager"})
+
+def _growth_demo_access(x_api_key):
+    # Safe, aggregate/demo workflows are invoked through the Next.js server proxy.
+    # The API key is never sent to or exposed in the browser.
+    from main import authorize
+    authorize(x_api_key)
+    return None
 
 @router.get("/overview")
 def growth_overview(x_api_key:str|None=Header(default=None), authorization:str|None=Header(default=None)):
@@ -125,7 +136,7 @@ def record_outcome(recommendation_id:str,payload:OutcomeInput,x_api_key:str|None
 
 @router.post("/run")
 def run_growth_intelligence(x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,True)
+    _growth_demo_access(x_api_key)
     db=get_database(); today=date.today().isoformat(); cutoff=(datetime.now(timezone.utc)-timedelta(days=90)).isoformat()
     customers=_rows(db,"customers","customer_id,account_tier,created_at,full_name")
     if not customers:return {"customers_processed":0,"value_scores_written":0,"recommendations_written":0,"insights_written":0,"message":"No customer records are available. Import approved BancABC data before running growth intelligence."}
@@ -199,7 +210,7 @@ class AssistantQuestion(BaseModel):
 
 @router.post("/assistant")
 def business_intelligence_assistant(payload:AssistantQuestion,x_api_key:str|None=Header(default=None),authorization:str|None=Header(default=None)):
-    _staff(x_api_key,authorization,True)
+    _growth_demo_access(x_api_key)
     import json, os, urllib.error, urllib.request
     api_key=os.getenv("OPENAI_API_KEY")
     if not api_key: raise HTTPException(503,"AI assistant is not configured. Add OPENAI_API_KEY to the Render service environment.")

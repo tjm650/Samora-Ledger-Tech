@@ -52,16 +52,17 @@ python backend/bancabc_import.py \`
   --currency USD
 \`\`\`
 
-Only after the dry-run report and source-owner approval, apply:
+Only after the dry-run checksum is recorded in the manifest, the manifest totals match the source control report, and an authorized reviewer has independently confirmed the approval reference, apply:
 
-\`\`\`powershell
-python backend/bancabc_import.py \`
-  --customers .\\approved\\bancabc_customers.csv \`
-  --transactions .\\approved\\bancabc_transactions.csv \`
-  --source-system bancabc_core_banking \`
-  --currency USD \`
+\\`\\`\\`powershell
+python backend/bancabc_import.py \\
+  --customers .\\approved\\bancabc_customers.csv \\
+  --transactions .\\approved\\bancabc_transactions.csv \\
+  --source-system bancabc_core_banking \\
+  --currency USD \\
+  --approval-manifest .\\approved\\bancabc_approval_manifest.json \\
   --apply
-\`\`\`
+\\`\\`\\
 
 Use the actual currency agreed with BancABC; USD above is an example, not an assumption.
 

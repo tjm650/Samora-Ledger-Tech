@@ -50,7 +50,7 @@ The connected database has mock-only customer and feature rows and no verified c
 ## Read-only segmentation candidate comparison
 - `GET /api/v1/model-training/development-segmentation/compare` compares K-means solutions with 2, 3, 4 and 5 clusters on the same current mock feature snapshot.
 - Each candidate uses the existing median-imputation, missingness-indicator and standard-scaling pipeline, with five fixed random seeds and 20 K-means initialisations per seed.
-- Reports mean and standard deviation of silhouette scores, mean and minimum pairwise adjusted Rand index (ARI) across seeds, and representative cluster sizes/median features from seed 42.
+- Reports mean and standard deviation of silhouette scores (using a fixed sample of up to 500 rows per seed), mean and minimum pairwise adjusted Rand index (ARI) across seeds, and representative cluster sizes/median features from seed 42.
 - Silhouette is a separation diagnostic, not predictive accuracy. ARI is seed-to-seed assignment agreement, not evidence of business validity.
 - The endpoint is read-only: it does not upload artifacts, insert datasets, create model versions/runs/evaluations, alter customer records, or activate a candidate.
-- The Growth Intelligence comparison table is mock-only and experimental. Candidate results must be reviewed alongside cluster size, stability and business interpretability; no automatic winner is selected.
+- The Growth Intelligence comparison request is sequenced after the existing profile request to limit concurrent memory use. The comparison table is mock-only and experimental. Candidate results must be reviewed alongside cluster size, stability and business interpretability; no automatic winner is selected.

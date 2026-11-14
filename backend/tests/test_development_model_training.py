@@ -94,6 +94,11 @@ def test_read_only_cluster_comparison_reports_seed_stability_without_registry_wr
             "recency_days": float(i % 20),
             "frequency_30d": float((i // 20) * 15 + (i % 5)),
             "frequency_90d": float((i // 20) * 30 + (i % 7)),
+            "credit_inflow_90d": 0.0,
+            "debit_outflow_90d": 120.0,
+            "monetary_spend_30d": 30.0,
+            "monetary_spend_90d": 90.0,
+            "frequency_7d": 2.0,
         })
     monkeypatch.setattr(module, "_database", lambda: object())
     monkeypatch.setattr(

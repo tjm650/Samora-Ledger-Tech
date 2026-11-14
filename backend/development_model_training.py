@@ -299,11 +299,15 @@ PROFILE_FEATURES = {
     "salary_inflow_90d": "Salary inflow in 90 days",
     "balance_avg_30d": "Average balance in 30 days",
     "velocity_score": "Transaction velocity score",
+    "net_cashflow_90d": "Net cashflow in 90 days",
+    "debit_to_credit_ratio_90d": "Debit-to-credit ratio in 90 days",
+    "monthly_spend_trend_30d_vs_90d": "Recent monthly spend trend",
+    "activity_consistency_7d_vs_30d": "Recent activity consistency",
 }
 
 def _segment_interpretation(profile: dict[str, float], overall: dict[str, float], size: int, total: int) -> tuple[str, str, list[str]]:
     signals = []
-    for key in ("frequency_30d", "frequency_90d", "monetary_spend_90d", "credit_inflow_90d", "active_days_90d", "balance_avg_30d"):
+    for key in ("frequency_30d", "frequency_90d", "monetary_spend_90d", "credit_inflow_90d", "active_days_90d", "balance_avg_30d", "net_cashflow_90d", "debit_to_credit_ratio_90d", "monthly_spend_trend_30d_vs_90d", "activity_consistency_7d_vs_30d"):
         value, baseline = profile.get(key), overall.get(key)
         if value is None or baseline is None:
             continue

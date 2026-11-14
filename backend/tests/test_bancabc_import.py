@@ -122,7 +122,7 @@ def test_approval_manifest_rejects_mismatched_source_control_total(tmp_path):
     manifest = {
         "approval_reference": "DATA-APPROVAL-2026-001",
         "approved_by": "BancABC Data Owner",
-        "approved_at": "2026-11-14T09:00:00+02:00",
+        "approved_at": "2026-09-30T09:00:00+02:00",
         "source_system": "bancabc_core",
         "currency_code": "USD",
         "extraction_start": "2026-10-01T00:00:00+02:00",

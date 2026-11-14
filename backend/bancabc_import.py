@@ -103,6 +103,8 @@ def normalize_customer_rows(rows: list[dict[str, str]], source_system: str) -> l
             "region_code": row.get("region_code") or None,
             "source_system": source_system,
             "data_origin": "imported",
+            "approval_manifest_validated": approval is not None,
+            "approval_evidence": approval,
         })
     return output
 
@@ -308,18 +310,107 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
     }
 
 
+
+def validate_approval_manifest(
+    manifest_path: str,
+    customers: list[dict[str, Any]],
+    transactions: list[dict[str, Any]],
+    source_system: str,
+    currency: str,
+    checksum: str,
+) -> dict[str, Any]:
+    """Validate declared source approval and signed control totals before any write.
+
+    This checks package consistency, not the authenticity of the approver. A human
+    owner must independently verify the referenced approval evidence.
+    """
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as handle:
+            manifest = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ImportValidationError(f"approval manifest cannot be read: {exc}") from exc
+    required = (
+        "approval_reference", "approved_by", "approved_at", "source_system",
+        "currency_code", "extraction_start", "extraction_end",
+        "customer_count", "transaction_count", "debit_total", "credit_total",
+        "transaction_amount_total", "file_checksum_sha256",
+    )
+    missing = [key for key in required if manifest.get(key) in (None, "")]
+    if missing:
+        raise ImportValidationError(f"approval manifest missing fields: {', '.join(missing)}")
+    if manifest["source_system"] != source_system:
+        raise ImportValidationError("approval manifest source_system does not match --source-system")
+    if str(manifest["currency_code"]).upper() != currency.upper():
+        raise ImportValidationError("approval manifest currency_code does not match --currency")
+    try:
+        approved_at = datetime.fromisoformat(str(manifest["approved_at"]).replace("Z", "+00:00"))
+        extraction_start = datetime.fromisoformat(str(manifest["extraction_start"]).replace("Z", "+00:00"))
+        extraction_end = datetime.fromisoformat(str(manifest["extraction_end"]).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ImportValidationError("approval and extraction timestamps must be ISO-8601") from exc
+    if approved_at.tzinfo is None or extraction_start.tzinfo is None or extraction_end.tzinfo is None:
+        raise ImportValidationError("approval and extraction timestamps must include timezone offsets")
+    if extraction_start >= extraction_end:
+        raise ImportValidationError("extraction_start must be earlier than extraction_end")
+    if manifest["file_checksum_sha256"].lower() != checksum.lower():
+        raise ImportValidationError("approval manifest file_checksum_sha256 does not match the supplied CSV files")
+    expected_counts = {
+        "customer_count": len(customers),
+        "transaction_count": len(transactions),
+    }
+    for key, actual in expected_counts.items():
+        try:
+            declared = int(manifest[key])
+        except (TypeError, ValueError) as exc:
+            raise ImportValidationError(f"approval manifest {key} must be an integer") from exc
+        if declared != actual:
+            raise ImportValidationError(f"approval manifest {key} mismatch: declared {declared}, actual {actual}")
+    totals = {"debit_total": Decimal("0"), "credit_total": Decimal("0")}
+    for row in transactions:
+        totals["debit_total" if row["transaction_type"] == "Debit" else "credit_total"] += Decimal(row["amount"])
+    totals["transaction_amount_total"] = totals["debit_total"] + totals["credit_total"]
+    for key, actual in totals.items():
+        try:
+            declared = Decimal(str(manifest[key])).quantize(Decimal("0.0001"))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ImportValidationError(f"approval manifest {key} must be a decimal amount") from exc
+        if not declared.is_finite() or declared != actual.quantize(Decimal("0.0001")):
+            raise ImportValidationError(f"approval manifest {key} mismatch: declared {declared}, actual {actual}")
+    return {
+        "approval_reference": str(manifest["approval_reference"]),
+        "approved_by": str(manifest["approved_by"]),
+        "approved_at": approved_at.astimezone(timezone.utc).isoformat(),
+        "extraction_start": extraction_start.astimezone(timezone.utc).isoformat(),
+        "extraction_end": extraction_end.astimezone(timezone.utc).isoformat(),
+        "customer_count": len(customers),
+        "transaction_count": len(transactions),
+        **{key: str(value.quantize(Decimal("0.0001"))) for key, value in totals.items()},
+        "currency_code": currency.upper(),
+        "file_checksum_sha256": checksum,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Validate or import an approved BancABC CSV export.")
     parser.add_argument("--customers", required=True, help="Customer CSV file")
     parser.add_argument("--transactions", required=True, help="Transaction CSV file")
     parser.add_argument("--source-system", required=True, help="Stable source identifier, e.g. bancabc_core_banking")
     parser.add_argument("--currency", required=True, help="Default ISO 4217 currency code for transaction rows")
-    parser.add_argument("--apply", action="store_true", help="Write to Supabase; without this flag the command is dry-run only")
+    parser.add_argument("--approval-manifest", help="JSON manifest containing owner approval reference and signed source control totals")
+    parser.add_argument("--apply", action="store_true", help="Write to Supabase; requires a validated --approval-manifest")
     args = parser.parse_args()
     try:
         customers, transactions, checksum = prepare_import(
             args.customers, args.transactions, args.source_system, args.currency
         )
+        approval = None
+        if args.approval_manifest:
+            approval = validate_approval_manifest(
+                args.approval_manifest, customers, transactions, args.source_system,
+                args.currency.upper(), checksum
+            )
+        if args.apply and approval is None:
+            raise ImportValidationError("--apply requires --approval-manifest with matching approval and control totals")
         summary = {
             "mode": "apply" if args.apply else "dry_run",
             "customers_validated": len(customers),

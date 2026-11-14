@@ -298,3 +298,6 @@ from management_api import router as management_router
 from settings_api import router as settings_router
 app.include_router(management_router)
 app.include_router(settings_router)
+
+from growth_api import router as growth_router
+app.include_router(growth_router)

@@ -29,7 +29,7 @@ from sklearn.preprocessing import StandardScaler
 log = logging.getLogger("samora.development_training")
 router = APIRouter(tags=["development-model-training"])
 PAGE_SIZE = 1000
-FEATURE_COLUMNS = [
+BASE_FEATURE_COLUMNS = [
     "recency_days", "frequency_7d", "frequency_30d", "frequency_90d",
     "frequency_180d", "monetary_spend_30d", "monetary_spend_60d",
     "monetary_spend_90d", "monetary_spend_180d", "credit_inflow_30d",
@@ -40,7 +40,9 @@ FEATURE_COLUMNS = [
     "velocity_score", "discretionary_spend_ratio", "salary_disruption_flag",
     "balance_drawdown_pct",
 ]
-SCHEMA_VERSION = "customer-behaviour-v2"
+DERIVED_FEATURE_COLUMNS = ["net_cashflow_90d", "debit_to_credit_ratio_90d", "monthly_spend_trend_30d_vs_90d", "activity_consistency_7d_vs_30d"]
+FEATURE_COLUMNS = BASE_FEATURE_COLUMNS + DERIVED_FEATURE_COLUMNS
+SCHEMA_VERSION = "customer-behaviour-v2-derived-1"
 
 
 def _authorize(key: str | None) -> None:
@@ -86,9 +88,17 @@ def prepare_mock_feature_frame(customers: list[dict[str, Any]], features: list[d
     if frame.empty:
         return frame
     frame = frame.drop_duplicates(subset=["customer_id"], keep="last")
-    for column in FEATURE_COLUMNS:
+    for column in BASE_FEATURE_COLUMNS:
         if column not in frame:
             frame[column] = np.nan
+    frame[BASE_FEATURE_COLUMNS] = frame[BASE_FEATURE_COLUMNS].apply(pd.to_numeric, errors="coerce")
+    # Derive additional signals from persisted, quality-passed source features.
+    frame["net_cashflow_90d"] = frame["credit_inflow_90d"] - frame["debit_outflow_90d"]
+    frame["debit_to_credit_ratio_90d"] = frame["debit_outflow_90d"] / frame["credit_inflow_90d"].replace(0, np.nan)
+    monthly_90d = frame["monetary_spend_90d"] / 3.0
+    frame["monthly_spend_trend_30d_vs_90d"] = (frame["monetary_spend_30d"] - monthly_90d) / monthly_90d.replace(0, np.nan)
+    expected_weekly = frame["frequency_30d"] / (30.0 / 7.0)
+    frame["activity_consistency_7d_vs_30d"] = frame["frequency_7d"] / expected_weekly.replace(0, np.nan)
     frame[FEATURE_COLUMNS] = frame[FEATURE_COLUMNS].apply(pd.to_numeric, errors="coerce")
     frame = frame.replace([np.inf, -np.inf], np.nan)
     frame = frame.dropna(axis=1, how="all")
@@ -99,7 +109,7 @@ def run_mock_segmentation() -> dict[str, Any]:
     started = time.monotonic()
     db = _database()
     customers = _all_rows(db, "customers", "customer_id,data_origin")
-    features = _all_rows(db, "customer_features", "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(FEATURE_COLUMNS))
+    features = _all_rows(db, "customer_features", "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(BASE_FEATURE_COLUMNS))
     frame = prepare_mock_feature_frame(customers, features)
     if len(frame) < 30:
         raise ValueError("At least 30 quality-passed mock customer feature rows are required.")
@@ -413,7 +423,7 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
         customers = _all_rows(db, "customers", "customer_id,data_origin")
         features = _all_rows(
             db, "customer_features",
-            "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(FEATURE_COLUMNS),
+            "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(BASE_FEATURE_COLUMNS),
         )
         frame = prepare_mock_feature_frame(customers, features)
         if len(frame) < 30:

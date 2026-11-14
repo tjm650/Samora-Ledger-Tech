@@ -232,7 +232,7 @@ def run_mock_segmentation() -> dict[str, Any]:
         "model_run_id": run_id,
         "dataset_id": dataset_id,
         "evaluation_name": "mock-segmentation-fit",
-        "split_name": "full_dataset_unsupervised",
+        "split_name": "train",
         "sample_count": len(frame),
         "metrics": {"silhouette_score": silhouette, "cluster_count": n_clusters, "cluster_counts": cluster_counts},
         "acceptance_status": "not_reviewed",

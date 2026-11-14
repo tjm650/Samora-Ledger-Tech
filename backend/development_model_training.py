@@ -269,3 +269,116 @@ def train_development_segmentation(x_api_key: str | None = Header(default=None))
     except Exception as exc:
         log.exception("Development-only mock segmentation failed")
         raise HTTPException(500, "Development-only model training failed; inspect backend logs") from exc
+
+
+PROFILE_FEATURES = {
+    "recency_days": "Days since last transaction",
+    "frequency_7d": "Transactions in 7 days",
+    "frequency_30d": "Transactions in 30 days",
+    "frequency_90d": "Transactions in 90 days",
+    "frequency_180d": "Transactions in 180 days",
+    "monetary_spend_30d": "Debit spend in 30 days",
+    "monetary_spend_90d": "Debit spend in 90 days",
+    "monetary_spend_180d": "Debit spend in 180 days",
+    "credit_inflow_90d": "Credit inflow in 90 days",
+    "debit_outflow_90d": "Debit outflow in 90 days",
+    "average_transaction_value_90d": "Average transaction value",
+    "active_days_90d": "Active days in 90 days",
+    "channel_diversity_90d": "Channel diversity",
+    "category_diversity_90d": "Category diversity",
+    "salary_inflow_90d": "Salary inflow in 90 days",
+    "balance_avg_30d": "Average balance in 30 days",
+    "velocity_score": "Transaction velocity score",
+}
+
+def _segment_interpretation(profile: dict[str, float], overall: dict[str, float], size: int, total: int) -> tuple[str, str, list[str]]:
+    signals = []
+    for key in ("frequency_30d", "frequency_90d", "monetary_spend_90d", "credit_inflow_90d", "active_days_90d", "balance_avg_30d"):
+        value, baseline = profile.get(key), overall.get(key)
+        if value is None or baseline is None:
+            continue
+        if baseline > 0 and value >= baseline * 1.25:
+            signals.append((key, "above"))
+        elif baseline > 0 and value <= baseline * 0.75:
+            signals.append((key, "below"))
+    above = {k for k, direction in signals if direction == "above"}
+    below = {k for k, direction in signals if direction == "below"}
+    if "frequency_30d" in above and "monetary_spend_90d" in above:
+        name, summary = "Highly active, higher spend", "Activity and recent debit-spend measures are materially above the portfolio median."
+    elif "frequency_30d" in above:
+        name, summary = "Frequent transactors", "Transaction frequency is above the portfolio median; spend and balances should be considered separately."
+    elif "balance_avg_30d" in above and "frequency_30d" in below:
+        name, summary = "Higher-balance, lower activity", "Average balances are elevated while transaction frequency is comparatively low."
+    elif "frequency_30d" in below and "active_days_90d" in below:
+        name, summary = "Lower observed activity", "Recent transaction frequency and active days are below the portfolio median."
+    elif "monetary_spend_90d" in above:
+        name, summary = "Higher recent spend", "Recent debit-spend measures are above the portfolio median."
+    else:
+        name, summary = "Mixed behavioural profile", "No single configured behavioural signal dominates relative to the portfolio median."
+    if size / max(total, 1) < 0.02:
+        summary += " This is a very small cluster and its profile may be unstable."
+    return name, summary, [PROFILE_FEATURES.get(k, k) + (" above" if d == "above" else " below") + " portfolio median" for k, d in signals]
+
+@router.get("/api/v1/model-training/development-segmentation/profile")
+def development_segmentation_profile(x_api_key: str | None = Header(default=None)):
+    """Return aggregate-only interpretation of the latest mock segmentation run."""
+    _authorize(x_api_key)
+    try:
+        db = _database()
+        versions = (db.table("model_versions").select("model_version_id,training_dataset_id,artifact_uri,algorithm,approval_status,is_active,trained_at,validation_metrics,code_commit_sha")
+            .eq("algorithm", "kmeans").eq("approval_status", "experimental")
+            .order("trained_at", desc=True).limit(20).execute().data or [])
+        version = next((v for v in versions if v.get("training_dataset_id") and str(v.get("artifact_uri", "")).startswith("supabase://")), None)
+        if not version:
+            raise HTTPException(404, "No development segmentation model is registered.")
+        dataset_rows = (db.table("model_datasets").select("dataset_id,data_origin,feature_schema_version,feature_columns,row_count,manifest")
+            .eq("dataset_id", version["training_dataset_id"]).limit(1).execute().data or [])
+        if not dataset_rows or dataset_rows[0].get("data_origin") != "mock":
+            raise HTTPException(409, "The registered segmentation dataset is not explicitly mock-only.")
+        dataset = dataset_rows[0]
+        artifact_uri = version["artifact_uri"]
+        _, remainder = artifact_uri.split("://", 1)
+        bucket, path = remainder.split("/", 1)
+        artifact = db.storage.from_(bucket).download(path)
+        model = joblib.load(BytesIO(artifact))
+        columns = model.get("feature_columns", [])
+        customers = _all_rows(db, "customers", "customer_id,data_origin")
+        features = _all_rows(db, "customer_features", "customer_id,data_origin,feature_quality_status,feature_as_of," + ",".join(columns))
+        frame = prepare_mock_feature_frame(customers, features)
+        if frame.empty:
+            raise HTTPException(409, "No quality-passed mock feature rows are available for this model.")
+        for column in columns:
+            if column not in frame:
+                frame[column] = np.nan
+        labels = model["estimator"].predict(frame[columns])
+        profiled = frame[columns].copy()
+        profiled["cluster_id"] = labels.astype(int)
+        overall = profiled[columns].median(numeric_only=True).to_dict()
+        total = len(profiled)
+        clusters = []
+        for cluster_id, group in profiled.groupby("cluster_id"):
+            medians = group[columns].median(numeric_only=True).to_dict()
+            size = len(group)
+            name, summary, signals = _segment_interpretation(medians, overall, size, total)
+            selected = [k for k in ("recency_days", "frequency_30d", "frequency_90d", "monetary_spend_90d", "credit_inflow_90d", "active_days_90d", "balance_avg_30d") if k in columns and pd.notna(medians.get(k))]
+            clusters.append({
+                "cluster_id": int(cluster_id), "segment_name": name, "customer_count": size,
+                "share_pct": round(size / total * 100, 1), "summary": summary,
+                "signals": signals,
+                "small_cluster_review": size / max(total, 1) < 0.02,
+                "feature_medians": {k: round(float(medians[k]), 2) for k in selected},
+            })
+        return {
+            "status": "completed_development_only", "model_version_id": version["model_version_id"],
+            "dataset_id": dataset["dataset_id"], "customers_profiled": total,
+            "silhouette_score": (version.get("validation_metrics") or {}).get("silhouette_score"),
+            "production_eligible": False, "production_approved": False, "not_a_churn_model": True,
+            "data_origin": "mock", "clusters": sorted(clusters, key=lambda x: x["cluster_id"]),
+            "portfolio_medians": {k: round(float(overall[k]), 2) for k in columns if k in PROFILE_FEATURES and pd.notna(overall.get(k))},
+            "interpretation_note": "Names and descriptions are heuristic interpretations of cluster medians versus this mock portfolio; they are not validated customer segments or decision recommendations.",
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Development segmentation profiling failed")
+        raise HTTPException(500, "Unable to profile the development segmentation model; inspect backend logs") from exc

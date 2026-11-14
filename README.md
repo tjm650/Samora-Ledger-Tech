@@ -36,10 +36,10 @@ The migrations have been applied to the configured Supabase project and verified
 3. From `backend`: `python -m venv .venv && pip install -r requirements.txt`; start the API with `uvicorn main:app --reload`.
 4. Copy `frontend/.env.example` to `frontend/.env.local`. Set server-side `SAMORA_API_URL` and `SAMORA_API_KEY`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Run `npm install && npm run dev` from `frontend`.
 5. Configure Render with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `API_KEY`, and `API_CORS_ORIGINS`. To enable the optional AI Business Intelligence Assistant, also configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (defaults to `gpt-4o-mini`). The assistant sends aggregate portfolio metrics only, not customer names or account-level records. Configure Vercel with the two server-side Samora variables and the two public Supabase Auth variables. Do not prefix server secrets with `NEXT_PUBLIC_`.
-6. Provision staff accounts through the trusted Supabase Auth administration process. Assign approved `app_metadata.role` values: `executive`, `admin`, `analyst`, or `relationship_manager`. The frontend has no public registration. Never grant roles through user-editable metadata.
+6. The deployed mock-data demonstration does not require staff sign-in. Keep the server-side Samora API key private; do not expose it through `NEXT_PUBLIC_` variables. Staff authentication and role provisioning are not part of the current public mock-demo workflow.
 
 ## API surface
-All staff-facing data and management APIs require the private `X-API-Key` header and a verified Supabase staff JWT in `Authorization: Bearer <token>`. The health endpoint is public. Pipeline and one-shot demo administration operations are restricted to the trusted server-side proxy/API key and are never exposed to browser clients.
+The public mock-data demonstration uses server-side API proxies: the private `X-API-Key` is attached by the backend-facing server routes and is never exposed to browser clients. Staff sign-in is not required for the current demo workflow. Backend access remains API-key gated; keep `SAMORA_API_KEY` and the Supabase service-role key server-only. The health endpoint is public. Pipeline and administrative mutation operations remain restricted to trusted server-side calls.
 
 - `GET /health`
 - `GET /api/v1/executive/overview`
@@ -62,15 +62,14 @@ All staff-facing data and management APIs require the private `X-API-Key` header
 
 The legacy `GET /api/v1/customers` and `GET /api/v1/explain/{customer_id}` routes remain as authenticated compatibility endpoints.
 
-## Security and roles
-The Next.js workspace requires Supabase Auth sessions and trusted `app_metadata.role` claims. Backend routes independently validate the staff JWT and role before using the server-side service-role database client. New enterprise tables have RLS enabled, are not granted to `anon` or `authenticated`; access is through the trusted backend using its server-side service-role client. The staff profile table permits authenticated users to read only their own profile.
-
-The CRM directory and customer profiles are confidential staff functionality. Executive aggregate analytics omit customer-level information. The Supabase service-role key and Render API key are server-only.
+## Security and demo access
+The current mock-data demonstration does not require staff sign-in. Server-side API proxies attach the private backend API key; browser clients must never receive the API key or Supabase service-role credential. The backend's demo-read mode must remain explicitly enabled only for the intended mock-data environment. Do not expose customer-level records or enable public mutation routes. New enterprise tables retain row-level security; trusted backend access uses its server-side service-role client. Any future live-production release must revisit authentication, authorization, data-access policy and audit requirements before real customer data is connected.
 
 ## Model development status
 
 - [Phase 1 model completion record](docs/PHASE_1_MODEL_COMPLETION.md) — mock-data behavioural segmentation scope, candidate diagnostics, model card, acceptance checklist and handoff.
-- [Phase 2 BancABC data onboarding](docs/PHASE_2_DATA_ONBOARDING.md) — source approval, import controls, reconciliation, data-quality and model reassessment gates.
+- [Phase 2 mock-data platform readiness](docs/PHASE_2_DATA_ONBOARDING.md) — deployed API verification, reliability and operational checks; BancABC onboarding remains a later production gate.
+- [Read-only mock-data API smoke test](scripts/mock_data_smoke_test.py) — validates core deployed API endpoints without modifying data.
 - [Model data foundation](docs/MODEL_DATA_FOUNDATION.md) and [model training pipeline](docs/MODEL_TRAINING_PIPELINE.md) describe the implementation and governance gates.
 
 ## Model and data limitations

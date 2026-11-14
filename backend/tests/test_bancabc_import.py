@@ -364,6 +364,8 @@ def test_batch_verification_requires_exact_rows_values_lineage_and_loaded_status
         "currency_code": "USD",
         "checksum_sha256": checksum,
         "source_row_count": 2,
+        "inserted_row_count": 2,
+        "rejected_row_count": 0,
         "metadata": {
             "source_customer_rows": 1,
             "source_transaction_rows": 1,

@@ -74,3 +74,37 @@ def test_profile_artifact_checksum_rejects_missing_checksum():
         _verify_profile_artifact_checksum(b"artifact", None)
 
     assert exc.value.status_code == 409
+
+
+
+def test_read_only_cluster_comparison_reports_seed_stability_without_registry_writes(monkeypatch):
+    import development_model_training as module
+
+    monkeypatch.setenv("API_KEY", "test-key")
+    customers = [{"customer_id": f"mock-{i}", "data_origin": "mock"} for i in range(60)]
+    features = []
+    for i in range(60):
+        features.append({
+            "customer_id": f"mock-{i}", "data_origin": "mock",
+            "feature_quality_status": "passed",
+            "recency_days": float(i % 20),
+            "frequency_30d": float((i // 20) * 15 + (i % 5)),
+            "frequency_90d": float((i // 20) * 30 + (i % 7)),
+        })
+    monkeypatch.setattr(module, "_database", lambda: object())
+    monkeypatch.setattr(
+        module, "_all_rows",
+        lambda db, table, columns: customers if table == "customers" else features,
+    )
+
+    result = module.compare_development_segmentation("test-key")
+
+    assert result["status"] == "completed_read_only_development_comparison"
+    assert result["data_origin"] == "mock"
+    assert result["customers_evaluated"] == 60
+    assert result["random_seeds"] == [7, 21, 42, 84, 126]
+    assert [row["cluster_count"] for row in result["comparison"]] == [2, 3, 4, 5]
+    assert all(row["stability_ari_mean"] is not None for row in result["comparison"])
+    assert all(row["silhouette_mean"] is not None for row in result["comparison"])
+    assert result["production_eligible"] is False
+    assert result["not_a_churn_model"] is True

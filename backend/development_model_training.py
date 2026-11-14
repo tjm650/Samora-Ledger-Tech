@@ -564,3 +564,144 @@ def compare_development_segmentation(x_api_key: str | None = Header(default=None
     except Exception as exc:
         log.exception("Development segmentation comparison failed")
         raise HTTPException(500, "Unable to compare development segmentation candidates; inspect backend logs") from exc
+
+@router.get("/api/v1/model-training/development-segmentation/temporal-stability")
+def development_segmentation_temporal_stability(x_api_key: str | None = Header(default=None)):
+    """Read-only same-artifact stability review across historical mock feature snapshots."""
+    _authorize(x_api_key)
+    try:
+        db = _database()
+        versions = (db.table("model_versions").select(
+            "model_version_id,training_dataset_id,artifact_uri,artifact_checksum,algorithm,approval_status,trained_at"
+        ).eq("algorithm", "kmeans").eq("approval_status", "experimental")
+            .order("trained_at", desc=True).limit(20).execute().data or [])
+        version = next((v for v in versions if v.get("training_dataset_id")
+                        and str(v.get("artifact_uri", "")).startswith("supabase://")), None)
+        if not version:
+            raise HTTPException(404, "No development segmentation model is registered.")
+        datasets = (db.table("model_datasets").select(
+            "dataset_id,data_origin,feature_schema_version,feature_columns,manifest"
+        ).eq("dataset_id", version["training_dataset_id"]).limit(1).execute().data or [])
+        if not datasets or datasets[0].get("data_origin") != "mock":
+            raise HTTPException(409, "The registered segmentation dataset is not explicitly mock-only.")
+        dataset = datasets[0]
+        bucket, artifact_path = version["artifact_uri"].split("://", 1)[1].split("/", 1)
+        artifact = db.storage.from_(bucket).download(artifact_path)
+        _verify_profile_artifact_checksum(artifact, version.get("artifact_checksum"))
+        model = joblib.load(BytesIO(artifact))
+        manifest = dataset.get("manifest") or {}
+        columns = model.get("feature_columns", [])
+        if (manifest.get("purpose") != "development_only_mock_behavioural_segmentation"
+                or manifest.get("data_origin") != "mock"
+                or manifest.get("production_eligible") is not False
+                or model.get("model_purpose") != "development_only_mock_behavioural_segmentation"
+                or model.get("production_eligible") is not False
+                or model.get("not_a_churn_model") is not True
+                or not columns or columns != dataset.get("feature_columns")
+                or any(c not in FEATURE_COLUMNS for c in columns)
+                or model.get("feature_schema_version") != dataset.get("feature_schema_version")
+                or not callable(getattr(model.get("estimator"), "predict", None))):
+            raise HTTPException(409, "The registered artifact does not match the mock-only segmentation contract.")
+
+        customers = _all_rows(db, "customers", "customer_id,data_origin")
+        mock_ids = {str(c["customer_id"]) for c in customers
+                    if c.get("customer_id") and c.get("data_origin") == "mock"}
+        history = _all_rows(
+            db, "customer_feature_history",
+            "customer_id,calculated_at,feature_quality_status,feature_values",
+        )
+        snapshots: dict[str, dict[str, dict[str, Any]]] = {}
+        for row in history:
+            customer_id = str(row.get("customer_id") or "")
+            stamp = str(row.get("calculated_at") or "")
+            values = row.get("feature_values") or {}
+            if (customer_id not in mock_ids or not stamp
+                    or row.get("feature_quality_status") != "passed"
+                    or not isinstance(values, dict)):
+                continue
+            snapshots.setdefault(stamp, {})[customer_id] = values
+        ordered = sorted(snapshots.items(), key=lambda item: item[0])[-6:]
+        if len(ordered) < 2:
+            return {
+                "status": "insufficient_historical_snapshots",
+                "model_version_id": version["model_version_id"],
+                "data_origin": "mock",
+                "snapshots_available": len(ordered),
+                "minimum_snapshots_required": 2,
+                "temporal_comparisons": [],
+                "production_eligible": False,
+                "production_approved": False,
+                "not_a_churn_model": True,
+                "interpretation_note": "At least two distinct quality-passed mock feature-history snapshots are required. No snapshots were generated or modified by this read-only endpoint.",
+            }
+
+        predicted: dict[str, dict[str, int]] = {}
+        snapshot_sizes = []
+        for stamp, customer_values in ordered:
+            rows = []
+            for customer_id, values in customer_values.items():
+                rows.append({"customer_id": customer_id, "data_origin": "mock",
+                             "feature_quality_status": "passed", **values})
+            frame = prepare_mock_feature_frame(
+                [{"customer_id": cid, "data_origin": "mock"} for cid in customer_values],
+                rows,
+            )
+            if frame.empty:
+                continue
+            for column in columns:
+                if column not in frame:
+                    frame[column] = np.nan
+            labels = model["estimator"].predict(frame[columns])
+            predicted[stamp] = {
+                str(cid): int(label) for cid, label in zip(frame["customer_id"].astype(str), labels)
+            }
+            snapshot_sizes.append({"snapshot_at": stamp, "customers_profiled": len(frame)})
+
+        comparisons = []
+        for index in range(1, len(ordered)):
+            previous_stamp, current_stamp = ordered[index - 1][0], ordered[index][0]
+            if previous_stamp not in predicted or current_stamp not in predicted:
+                continue
+            previous, current = predicted[previous_stamp], predicted[current_stamp]
+            overlap = sorted(set(previous) & set(current))
+            if len(overlap) < 30:
+                comparisons.append({
+                    "from_snapshot": previous_stamp, "to_snapshot": current_stamp,
+                    "overlapping_customers": len(overlap), "status": "insufficient_overlap",
+                    "adjusted_rand_index": None,
+                })
+                continue
+            previous_labels = [previous[cid] for cid in overlap]
+            current_labels = [current[cid] for cid in overlap]
+            comparisons.append({
+                "from_snapshot": previous_stamp, "to_snapshot": current_stamp,
+                "overlapping_customers": len(overlap), "status": "evaluated",
+                "adjusted_rand_index": round(float(adjusted_rand_score(previous_labels, current_labels)), 4),
+                "from_cluster_shares_pct": {
+                    str(cluster): round(previous_labels.count(cluster) / len(overlap) * 100, 1)
+                    for cluster in sorted(set(previous_labels))
+                },
+                "to_cluster_shares_pct": {
+                    str(cluster): round(current_labels.count(cluster) / len(overlap) * 100, 1)
+                    for cluster in sorted(set(current_labels))
+                },
+            })
+        evaluated = [item for item in comparisons if item.get("status") == "evaluated"]
+        return {
+            "status": "completed_read_only_temporal_review" if evaluated else "insufficient_temporal_overlap",
+            "model_version_id": version["model_version_id"],
+            "data_origin": "mock",
+            "snapshots_available": len(predicted),
+            "snapshot_sizes": snapshot_sizes,
+            "temporal_comparisons": comparisons,
+            "mean_temporal_ari": round(float(np.mean([x["adjusted_rand_index"] for x in evaluated])), 4) if evaluated else None,
+            "production_eligible": False,
+            "production_approved": False,
+            "not_a_churn_model": True,
+            "interpretation_note": "The same frozen model artifact is applied independently to historical feature snapshots. ARI is calculated only for customers present in both adjacent snapshots; it measures assignment agreement on that overlapping cohort, not business validity. Changes can reflect real behaviour, data coverage, feature-engineering changes or mock-data construction. This endpoint is read-only and does not create snapshots.",
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Development segmentation temporal stability review failed")
+        raise HTTPException(500, "Unable to review temporal segmentation stability; inspect backend logs") from exc

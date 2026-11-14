@@ -155,7 +155,7 @@ python backend/bancabc_import.py `
 
 The report checks:
 - Batch source system, currency, exact-file checksum and approval reference.
-- Expected customer and transaction counts against batch metadata.
+- Expected customer and transaction counts against batch metadata, including persisted inserted/rejected row counts.
 - Exact expected source IDs, missing rows and unexpected rows linked to the batch.
 - Source values and import_batch_id lineage for every expected record.
 - Final batch status (loaded is required for a verified result).

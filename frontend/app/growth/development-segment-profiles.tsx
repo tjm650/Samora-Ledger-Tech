@@ -31,7 +31,7 @@ function segmentLabel(segment:Segment){
 }
 function segmentSummary(segment:Segment){
   const m=segment.feature_medians;
-  if(segmentLabel(segment)==="No recent transactions")return "Median transaction frequency over 30 days is zero, with the last observed transaction around 40 days ago.";
+  if(segmentLabel(segment)==="No recent transactions")return `Median transaction frequency over 30 days is zero, with median recency of ${number(m.recency_days??0)} days.`;
   if(segmentLabel(segment)==="Low and declining activity")return "Recent transaction frequency is low and the 30-day spend run rate is materially below the preceding 90-day monthly run rate.";
   return segment.summary;
 }

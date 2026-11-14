@@ -205,7 +205,7 @@ def run_churn_training() -> dict[str, Any]:
     bucket = os.getenv("MODEL_ARTIFACT_BUCKET")
     if not bucket:
         raise ValueError("Training blocked: configure MODEL_ARTIFACT_BUCKET as a private bucket.")
-    if not os.getenv("GIT_COMMIT_SHA"):
+    if not (os.getenv("GIT_COMMIT_SHA") or os.getenv("RENDER_GIT_COMMIT")):
         raise ValueError("Training blocked: configure GIT_COMMIT_SHA for reproducibility.")
 
     splits = chronological_split(frame)
@@ -327,7 +327,7 @@ def run_churn_training() -> dict[str, Any]:
         "trained_at": trained_at.isoformat(),
         "validation_metrics": validation_metrics,
         "approval_status": "experimental",
-        "code_commit_sha": os.environ["GIT_COMMIT_SHA"],
+        "code_commit_sha": (os.getenv("GIT_COMMIT_SHA") or os.getenv("RENDER_GIT_COMMIT")),
     }).execute().data or []
     if not version_insert:
         raise RuntimeError("Experimental model registry entry could not be persisted")
@@ -347,7 +347,7 @@ def run_churn_training() -> dict[str, Any]:
         "dataset_id": dataset_id,
         "data_cutoff_at": pd.Timestamp(frame["outcome_date"].max()).isoformat(),
         "feature_schema_version": FEATURE_SCHEMA_VERSION,
-        "code_commit_sha": os.environ["GIT_COMMIT_SHA"],
+        "code_commit_sha": (os.getenv("GIT_COMMIT_SHA") or os.getenv("RENDER_GIT_COMMIT")),
         "environment_name": os.getenv("APP_ENV", "production"),
         "warnings": ["EXPERIMENTAL_NOT_APPROVED", "OUT_OF_TIME_TEST_IS_HOLDOUT_NOT_PRODUCTION_CERTIFICATION"],
         "run_metadata": {"dataset_checksum": dataset_checksum, "artifact_checksum": artifact_checksum},

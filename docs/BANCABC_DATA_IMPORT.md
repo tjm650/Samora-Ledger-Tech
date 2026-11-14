@@ -138,3 +138,28 @@ A dry-run emits aggregate reconciliation evidence without writing to Supabase:
 Without a manifest, the report is marked `awaiting_approval_manifest`; this is not an import-ready approval. With a manifest, it is marked `approval_manifest_validated`, but independent human verification of the bank's approval and source control report is still mandatory.
 
 The importer currently enforces one package currency per export. Mixed-currency files must be split into separately approved packages; it does not perform FX conversion. Transaction timestamps must fall within the manifest's half-open extraction interval `[extraction_start, extraction_end)`. Approval must predate or equal extraction start.
+
+## Read-only batch verification
+
+After an import or recovery, verify the batch against the exact same customer CSV, transaction CSV and approval manifest. This command performs database reads only; it never inserts, updates, resumes or repairs rows.
+
+```powershell
+python backend/bancabc_import.py `
+  --customers .\\approved\\bancabc_customers.csv `
+  --transactions .\\approved\\bancabc_transactions.csv `
+  --source-system bancabc_core_banking `
+  --currency USD `
+  --approval-manifest .\\approved\\bancabc_approval_manifest.json `
+  --verify-batch-id <IMPORT_BATCH_UUID>
+```
+
+The report checks:
+- Batch source system, currency, exact-file checksum and approval reference.
+- Expected customer and transaction counts against batch metadata.
+- Exact expected source IDs, missing rows and unexpected rows linked to the batch.
+- Source values and import_batch_id lineage for every expected record.
+- Final batch status (loaded is required for a verified result).
+
+Exit code 0 means the exact package and loaded batch reconciled. Exit code 3 means verification found a mismatch or the batch is not marked loaded; inspect the batch and source lineage before taking action. Validation/input errors exit with code 2. The report contains aggregate mismatch counts and does not print customer or transaction records.
+
+Never use a new import batch to work around a verification mismatch. Preserve the original batch and resolve discrepancies with the source owner before any corrective import.

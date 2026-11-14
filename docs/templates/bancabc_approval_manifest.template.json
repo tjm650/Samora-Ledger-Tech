@@ -1,0 +1,15 @@
+{
+  "approval_reference": "REPLACE_WITH_BANK_APPROVAL_REFERENCE",
+  "approved_by": "REPLACE_WITH_APPROVED_DATA_OWNER",
+  "approved_at": "2026-11-14T09:00:00+02:00",
+  "source_system": "REPLACE_WITH_STABLE_SOURCE_SYSTEM_ID",
+  "currency_code": "REPLACE_WITH_CONFIRMED_ISO_4217_CODE",
+  "extraction_start": "2026-10-01T00:00:00+02:00",
+  "extraction_end": "2026-11-01T00:00:00+02:00",
+  "customer_count": 0,
+  "transaction_count": 0,
+  "debit_total": "0.0000",
+  "credit_total": "0.0000",
+  "transaction_amount_total": "0.0000",
+  "file_checksum_sha256": "REPLACE_WITH_CHECKSUM_FROM_DRY_RUN"
+}

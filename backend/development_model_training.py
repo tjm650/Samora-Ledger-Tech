@@ -303,6 +303,10 @@ PROFILE_FEATURES = {
     "debit_to_credit_ratio_90d": "Debit-to-credit ratio in 90 days",
     "monthly_spend_trend_30d_vs_90d": "Recent monthly spend trend",
     "activity_consistency_7d_vs_30d": "Recent activity consistency",
+    "net_cashflow_90d": "Net cashflow in 90 days",
+    "debit_to_credit_ratio_90d": "Debit-to-credit ratio in 90 days",
+    "monthly_spend_trend_30d_vs_90d": "Recent monthly spend trend",
+    "activity_consistency_7d_vs_30d": "Recent activity consistency",
 }
 
 def _segment_interpretation(profile: dict[str, float], overall: dict[str, float], size: int, total: int) -> tuple[str, str, list[str]]:
@@ -394,7 +398,7 @@ def development_segmentation_profile(x_api_key: str | None = Header(default=None
             medians = group[columns].median(numeric_only=True).to_dict()
             size = len(group)
             name, summary, signals = _segment_interpretation(medians, overall, size, total)
-            selected = [k for k in ("recency_days", "frequency_30d", "frequency_90d", "monetary_spend_90d", "credit_inflow_90d", "active_days_90d", "balance_avg_30d") if k in columns and pd.notna(medians.get(k))]
+            selected = [k for k in ("recency_days", "frequency_30d", "frequency_90d", "monetary_spend_90d", "credit_inflow_90d", "active_days_90d", "balance_avg_30d", "net_cashflow_90d", "debit_to_credit_ratio_90d", "monthly_spend_trend_30d_vs_90d", "activity_consistency_7d_vs_30d") if k in columns and pd.notna(medians.get(k))]
             clusters.append({
                 "cluster_id": int(cluster_id), "segment_name": name, "customer_count": size,
                 "share_pct": round(size / total * 100, 1), "summary": summary,

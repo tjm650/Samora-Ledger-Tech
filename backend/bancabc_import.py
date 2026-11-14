@@ -243,6 +243,7 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
                 "Resolve identity mapping before import; no rows have been written."
             )
 
+    source_customer_count, source_transaction_count = len(customers), len(transactions)
     existing_customers = _existing_records(db, "customers", "customer_id", customers)
     existing_transactions = _existing_records(db, "transactions", "transaction_id", transactions)
     customer_fields = [
@@ -268,10 +269,10 @@ def import_to_supabase(customers, transactions, checksum, source_system, currenc
         "data_origin": "imported",
         "status": "validating",
         "currency_code": currency,
-        "source_row_count": len(customers) + len(transactions),
+        "source_row_count": source_customer_count + source_transaction_count,
         "checksum_sha256": checksum,
         "schema_version": SCHEMA_VERSION,
-        "metadata": {"customer_rows_to_insert": len(customers), "transaction_rows_to_insert": len(transactions), "import_method": "bancabc_csv_v1"},
+        "metadata": {"source_customer_rows": source_customer_count, "source_transaction_rows": source_transaction_count, "new_customer_rows": len(customers), "new_transaction_rows": len(transactions), "import_method": "bancabc_csv_v1"},
     }).execute().data[0]
     batch_id = batch["import_batch_id"]
     inserted_customers = inserted_transactions = 0
